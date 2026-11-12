@@ -1,0 +1,45 @@
+# Entornos virtuales Python
+.venv/
+venv/
+ENV/
+env/
+
+# Caché y compilados
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+.pytest_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+
+# Builds y distribuciones
+build/
+dist/
+*.exe
+*.dll
+*.pyd
+*.so
+
+# Fortify
+.fortify/
+
+# Bases de datos locales
+*.db
+*.db-shm
+*.db-wal
+data/*.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+*.log

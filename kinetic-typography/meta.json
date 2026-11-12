@@ -1,0 +1,122 @@
+{
+  "id": "kinetic-typography",
+  "slug": "kinetic-typography",
+  "order": 31,
+  "name": "Kinetic Typography",
+  "technicalName": "Tipografía cinética",
+  "aliases": [
+    "Kinetic type",
+    "Tipografía en movimiento"
+  ],
+  "version": "1.0",
+  "year": "2016",
+  "category": "interaccion",
+  "tags": [
+    "movimiento",
+    "tipografía",
+    "ritmo",
+    "marquesina"
+  ],
+  "priority": "must",
+  "thumbnail": "card.html",
+  "accentColor": "#FFE600",
+  "palette": [
+    "#0A0A0A",
+    "#FFE600",
+    "#FF3D00",
+    "#FFFFFF",
+    "#262626"
+  ],
+  "fontsUsed": [
+    "syne",
+    "jetbrains-mono"
+  ],
+  "libsUsed": [],
+  "summary": "La tipografía se mueve: marquesinas, palabras que rotan y ritmo visual en lugar de imágenes.",
+  "sections": {
+    "nombreComun": "Tipografía cinética",
+    "nombreTecnico": "Kinetic typography; texto animado como elemento principal",
+    "historia": "La tipografía cinética apareció en el cine y la televisión de mediados del siglo XX, cuando los títulos de crédito comenzaron a moverse. Saul Bass y Maurice Binder la convirtieron en narración: la letra no solo decía, también actuaba. Con la web llegó el texto animado en Flash y, después, en CSS y JavaScript. La técnica se popularizó en 2016 con las marquesinas de las landings y los generadores de vídeo para redes. Su principio es que el movimiento aporta significado: una palabra que se estira, se repite o se descompone comunica antes de leerse. El reto es la legibilidad y el respeto a la reducción de movimiento.",
+    "composicion": "El texto ocupa todo el espacio disponible y sustituye a la imagen. Las palabras se repiten en marquesinas horizontales, cambian de escala o se superponen con contornos. La tipografía display es pesada y variable; la monoespaciada se usa para etiquetas. Los bloques de color y las líneas refuerzan el ritmo. La composición se mide en tiempos, no solo en píxeles: cada elemento entra y sale según un compás. El movimiento usa transform y opacity para no afectar al layout. La interfaz se mantiene navegable aunque el fondo esté en movimiento.",
+    "colorimetria": "Fondo negro o casi negro con tipografía blanca y un acento muy saturado: amarillo, naranja o rojo. El contraste es máximo porque la letra es la protagonista. Los contornos permiten superponer palabras sin perder legibilidad. Los colores se alternan por capas de texto. La saturación se reserva al acento y a las palabras clave. Es importante que el movimiento no reduzca el contraste ni provoque parpadeos. Las animaciones deben ser lentas o controlables, y detenerse con prefers-reduced-motion.",
+    "comoReconocer": [
+      "Marquesinas y palabras en movimiento",
+      "Tipografía display como imagen principal",
+      "Repetición y superposición de texto",
+      "Contornos y bloques de color",
+      "Ritmo temporal muy marcado"
+    ],
+    "datosCuriosos": "Saul Bass diseñó secuencias de títulos que se estudian como tipografía cinética. En web, una marquesina puede hacerse con dos copias del texto y una animación de translateX infinita.",
+    "creador": "Saul Bass, Maurice Binder y la tradición del diseño de títulos",
+    "quienLoUsa": "Cine, videoclips, eventos, moda y landings creativas"
+  },
+  "antipatrones": [
+    "Animar párrafos que deben leerse con calma",
+    "Movimiento constante sin pausa ni control",
+    "Texto en movimiento que provoca parpadeos"
+  ],
+  "referencias": [
+    "https://en.wikipedia.org/wiki/Kinetic_typography",
+    "https://developer.mozilla.org/en-US/docs/Web/CSS/animation"
+  ],
+  "views": [
+    {
+      "id": "index",
+      "file": "index.html",
+      "label": "Guía del estilo"
+    },
+    {
+      "id": "one-page",
+      "file": "one-page.html",
+      "label": "One page"
+    },
+    {
+      "id": "dashboard",
+      "file": "dashboard.html",
+      "label": "Panel de control"
+    },
+    {
+      "id": "chat",
+      "file": "chat.html",
+      "label": "Chat IA"
+    },
+    {
+      "id": "login",
+      "file": "login.html",
+      "label": "Login"
+    },
+    {
+      "id": "blank",
+      "file": "blank.html",
+      "label": "Blank page"
+    },
+    {
+      "id": "404",
+      "file": "404.html",
+      "label": "404"
+    },
+    {
+      "id": "500",
+      "file": "500.html",
+      "label": "500"
+    },
+    {
+      "id": "sorry",
+      "file": "sorry.html",
+      "label": "Sorry"
+    }
+  ],
+  "app": {
+    "views": 9,
+    "themes": 12,
+    "modes": 4,
+    "geometries": 12,
+    "backgrounds": 12,
+    "animations": 12,
+    "languages": [
+      "es",
+      "en"
+    ],
+    "offline": true
+  }
+}
