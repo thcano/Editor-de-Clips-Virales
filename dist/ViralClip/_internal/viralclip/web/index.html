@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Editor local de clips virales: transcribe videos con Whisper y genera ganchos, subtítulos y hashtags."
+    />
+    <meta name="color-scheme" content="light dark" />
+    <title>Editor de Clips Virales</title>
+    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/static/styles.css" />
+    <script type="module" src="/static/app.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#contenido">Saltar al contenido</a>
+
+    <header class="site-header">
+      <div class="brand">
+        <svg
+          class="brand-mark"
+          viewBox="0 0 48 48"
+          role="img"
+          aria-label="Logotipo de Editor de Clips Virales"
+        >
+          <rect x="3" y="8" width="42" height="32" rx="8" fill="currentColor" opacity="0.14" />
+          <path d="M20 17v14l12-7-12-7Z" fill="currentColor" />
+          <path
+            d="M9 14v20M39 14v20"
+            stroke="currentColor"
+            stroke-width="3"
+            stroke-linecap="round"
+          />
+        </svg>
+        <div>
+          <h1>Editor de Clips Virales</h1>
+          <p class="tagline">
+            De un video a ganchos, subtítulos y hashtags listos para publicar.
+          </p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <span id="health-badge" class="badge badge-neutral" role="status" aria-live="polite">
+          Comprobando estado…
+        </span>
+        <button id="open-settings" class="btn btn-ghost" type="button">
+          Ajustes
+        </button>
+      </div>
+    </header>
+
+    <main id="contenido" class="layout" tabindex="-1">
+      <section class="panel" aria-labelledby="transcribe-title">
+        <h2 id="transcribe-title">Transcribir video</h2>
+        <p class="panel-intro">
+          Whisper y FFmpeg se ejecutan en tu equipo. El audio no sale de aquí.
+        </p>
+
+        <form id="transcribe-form" novalidate>
+          <div class="field">
+            <label for="video-file">Video o audio</label>
+            <div id="video-drop" class="drop-zone">
+              <input
+                id="video-file"
+                name="video-file"
+                type="file"
+                accept="video/*,audio/*,.mkv,.m4v,.opus"
+                aria-describedby="video-help"
+              />
+              <p id="video-help" class="help">
+                Arrastra un archivo aquí o selecciónalo. MP4, MKV, MOV, WebM, MP3, WAV…
+              </p>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="video-path">…o indica una ruta local</label>
+            <input
+              id="video-path"
+              name="video-path"
+              type="text"
+              spellcheck="false"
+              autocomplete="off"
+              placeholder="C:\videos\entrevista.mp4"
+            />
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
+              <label for="whisper-model">Modelo de Whisper</label>
+              <select id="whisper-model" name="whisper-model">
+                <option value="small" selected>small (equilibrado)</option>
+                <option value="medium">medium (más preciso)</option>
+                <option value="base">base (rápido)</option>
+                <option value="tiny">tiny (muy rápido)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="whisper-language">Idioma</label>
+              <select id="whisper-language" name="whisper-language">
+                <option value="auto" selected>Detectar automáticamente</option>
+                <option value="es">Español</option>
+                <option value="en">Inglés</option>
+                <option value="pt">Portugués</option>
+                <option value="fr">Francés</option>
+                <option value="it">Italiano</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button id="transcribe-btn" class="btn btn-primary" type="submit">
+              Transcribir
+            </button>
+          </div>
+
+          <div id="transcribe-progress-wrap" class="progress-wrap" hidden>
+            <progress id="transcribe-progress" max="100" value="0">
+              0%
+            </progress>
+            <p id="transcribe-stage" class="help"></p>
+          </div>
+
+          <p
+            id="transcribe-status"
+            class="status"
+            role="status"
+            aria-live="polite"
+          ></p>
+
+          <div id="transcribe-result" class="transcript-result" hidden>
+            <h3>Transcripción lista</h3>
+            <p id="transcribe-meta" class="detail-meta"></p>
+            <div class="actions">
+              <button id="analyze-transcription" class="btn btn-primary" type="button">
+                Analizar esta transcripción
+              </button>
+              <button id="load-transcript-json" class="btn btn-ghost" type="button">
+                Cargar JSON en el editor
+              </button>
+              <button id="copy-transcript-json" class="btn btn-ghost" type="button">
+                Copiar JSON
+              </button>
+            </div>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel" aria-labelledby="upload-title">
+        <h2 id="upload-title">Nuevo análisis</h2>
+        <p class="panel-intro">
+          Carga la transcripción en JSON o pégala. Nada sale de tu equipo.
+        </p>
+
+        <form id="analysis-form" novalidate>
+          <div class="field">
+            <label for="transcript-file">Archivo de transcripción (JSON)</label>
+            <input
+              id="transcript-file"
+              name="transcript-file"
+              type="file"
+              accept=".json,application/json"
+              aria-describedby="transcript-help"
+            />
+            <p id="transcript-help" class="help">
+              Acepta una lista de segmentos o un objeto con
+              <code>segments</code>.
+            </p>
+          </div>
+
+          <div class="field">
+            <label for="transcript-text">…o pega el JSON aquí</label>
+            <textarea
+              id="transcript-text"
+              name="transcript-text"
+              rows="6"
+              spellcheck="false"
+              autocomplete="off"
+              placeholder='[{"start": 0, "end": 5, "text": "Nadie te cuenta esto…"}]'
+            ></textarea>
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
+              <label for="platform">Plataforma</label>
+              <select id="platform" name="platform">
+                <option value="tiktok">TikTok</option>
+                <option value="reels">Instagram Reels</option>
+                <option value="shorts">YouTube Shorts</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="max-clips">Número de clips</label>
+              <input
+                id="max-clips"
+                name="max-clips"
+                type="number"
+                min="1"
+                max="8"
+                step="1"
+                value="3"
+                inputmode="numeric"
+              />
+            </div>
+          </div>
+
+          <details class="advanced">
+            <summary>Opciones avanzadas</summary>
+            <div class="grid-2">
+              <div class="field">
+                <label for="min-duration">Duración mínima (s)</label>
+                <input
+                  id="min-duration"
+                  name="min-duration"
+                  type="number"
+                  min="5"
+                  max="180"
+                  step="1"
+                  value="15"
+                  inputmode="numeric"
+                />
+              </div>
+              <div class="field">
+                <label for="max-duration">Duración máxima (s)</label>
+                <input
+                  id="max-duration"
+                  name="max-duration"
+                  type="number"
+                  min="10"
+                  max="180"
+                  step="1"
+                  value="60"
+                  inputmode="numeric"
+                />
+              </div>
+            </div>
+            <div class="field field-check">
+              <input id="use-llm" name="use-llm" type="checkbox" checked />
+              <label for="use-llm">
+                Refinar ganchos con Ollama si está disponible
+              </label>
+            </div>
+          </details>
+
+          <div class="actions">
+            <button id="analyze-btn" class="btn btn-primary" type="submit">
+              Analizar transcripción
+            </button>
+            <button id="sample-btn" class="btn btn-ghost" type="button">
+              Cargar ejemplo
+            </button>
+          </div>
+
+          <p id="form-status" class="status" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section class="panel" aria-labelledby="history-title">
+        <div class="panel-head">
+          <h2 id="history-title">Historial</h2>
+          <button id="refresh-history" class="btn btn-ghost" type="button">
+            Actualizar
+          </button>
+        </div>
+        <p id="history-status" class="status" role="status" aria-live="polite"></p>
+        <ul id="history-list" class="history-list" aria-label="Análisis recientes"></ul>
+      </section>
+
+      <section
+        id="detail"
+        class="panel panel-wide"
+        aria-labelledby="detail-title"
+        hidden
+      >
+        <div class="panel-head">
+          <h2 id="detail-title" tabindex="-1">Resultado</h2>
+          <button id="close-detail" class="btn btn-ghost" type="button">
+            Cerrar
+          </button>
+        </div>
+
+        <div id="detail-meta" class="detail-meta"></div>
+        <div id="detail-error" class="alert alert-error" role="alert" hidden></div>
+
+        <div id="export-actions" class="export-actions" hidden>
+          <span class="export-label">Descargar:</span>
+          <a class="btn btn-ghost" data-export="json" href="#" download>JSON</a>
+          <a class="btn btn-ghost" data-export="spec" href="#" download>Especificación</a>
+          <a class="btn btn-ghost" data-export="srt" href="#" download>SRT</a>
+          <a class="btn btn-ghost" data-export="vtt" href="#" download>VTT</a>
+        </div>
+
+        <ol id="clips" class="clip-list" aria-label="Clips generados"></ol>
+        <p id="clips-empty" class="status" hidden>
+          Todavía no hay clips para mostrar.
+        </p>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>
+        Local-first: análisis y datos se quedan en tu equipo. Sin telemetría ni nube por
+        defecto.
+      </p>
+    </footer>
+
+    <dialog id="settings-dialog" aria-labelledby="settings-title">
+      <form id="settings-form" method="dialog">
+        <h2 id="settings-title">Ajustes</h2>
+        <p class="help">
+          La API key solo es necesaria si definiste <code>VIRALCLIP_API_KEY</code>. Se
+          guarda en esta pestaña y se borra al cerrarla.
+        </p>
+        <div class="field">
+          <label for="api-key">API key</label>
+          <input
+            id="api-key"
+            name="api-key"
+            type="password"
+            autocomplete="off"
+            placeholder="Opcional"
+          />
+        </div>
+        <fieldset class="flags-fieldset">
+          <legend>Funciones</legend>
+          <p class="help">
+            Los cambios se aplican al instante en esta pestaña.
+          </p>
+          <div id="flags-list" class="flags-list"></div>
+          <p id="flags-status" class="status" role="status" aria-live="polite"></p>
+        </fieldset>
+        <div class="actions">
+          <button id="save-settings" class="btn btn-primary" type="submit">
+            Guardar
+          </button>
+          <button id="clear-settings" class="btn btn-ghost" type="button">
+            Borrar clave
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+    <template id="clip-template">
+      <li class="clip-card">
+        <div class="clip-head">
+          <span class="clip-rank" aria-hidden="true"></span>
+          <div class="clip-heading">
+            <h3 class="clip-hook"></h3>
+            <p class="clip-time"></p>
+          </div>
+          <span class="clip-score"></span>
+        </div>
+        <p class="clip-caption"></p>
+        <p class="clip-reason"></p>
+        <ul class="hashtags" aria-label="Hashtags del clip"></ul>
+        <div class="clip-actions">
+          <button class="btn btn-small copy-hook" type="button">
+            Copiar gancho
+          </button>
+          <button class="btn btn-small copy-caption" type="button">
+            Copiar texto
+          </button>
+          <a class="btn btn-small clip-srt" href="#" download>Descargar SRT</a>
+        </div>
+      </li>
+    </template>
+  </body>
+</html>
