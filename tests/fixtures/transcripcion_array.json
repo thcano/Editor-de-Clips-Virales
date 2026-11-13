@@ -1,0 +1,12 @@
+[
+  {
+    "start": 0,
+    "end": 2.5,
+    "text": "Primer segmento de prueba."
+  },
+  {
+    "start": 2.5,
+    "end": 5.0,
+    "text": "Segundo segmento de prueba."
+  }
+]

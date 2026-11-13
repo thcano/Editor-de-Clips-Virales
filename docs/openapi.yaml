@@ -1,0 +1,708 @@
+openapi: 3.1.0
+info:
+  title: Editor de Clips Virales API
+  version: 1.0.0
+  description: |
+    API local para analizar transcripciones, detectar momentos virales y generar
+    ganchos, subtítulos dinámicos y hashtags. Local-first: no requiere nube.
+  contact:
+    name: Editor de Clips Virales
+servers:
+  - url: http://127.0.0.1:8000
+    description: Servidor local
+tags:
+  - name: sistema
+    description: Salud y configuración
+  - name: analisis
+    description: Creación y consulta de análisis
+  - name: transcripcion
+    description: Transcripción local con Whisper
+  - name: exportacion
+    description: Exportación de resultados
+  - name: flags
+    description: Feature flags locales
+
+paths:
+  /api/health:
+    get:
+      tags: [sistema]
+      summary: Estado de la aplicación
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+
+  /api/config:
+    get:
+      tags: [sistema]
+      summary: Límites, plataformas y flags activos
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Config"
+
+  /api/analyses:
+    get:
+      tags: [analisis]
+      summary: Listar historial de análisis
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Lista paginada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalysisList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags: [analisis]
+      summary: Crear un análisis
+      description: Acepta una transcripción JSON. El análisis se ejecuta de forma asíncrona y se consulta por id o por SSE.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnalysisRequest"
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                platform:
+                  type: string
+                  enum: [tiktok, reels, shorts]
+                max_clips:
+                  type: integer
+                  minimum: 1
+                  maximum: 20
+      responses:
+        "202":
+          description: Análisis aceptado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobAccepted"
+        "400":
+          $ref: "#/components/responses/InvalidTranscript"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/analyses/{analysis_id}:
+    get:
+      tags: [analisis]
+      summary: Consultar estado y resultado
+      parameters:
+        - $ref: "#/components/parameters/AnalysisId"
+      responses:
+        "200":
+          description: Análisis encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Analysis"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [analisis]
+      summary: Borrar análisis y clips
+      parameters:
+        - $ref: "#/components/parameters/AnalysisId"
+      responses:
+        "204":
+          description: Borrado
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/analyses/{analysis_id}/events:
+    get:
+      tags: [analisis]
+      summary: Progreso por Server-Sent Events
+      description: |
+        Stream `text/event-stream` con el estado actual y cada cambio de estado,
+        progreso o etapa. Cada evento incluye `id` incremental, `event`
+        (`progress`/`done`/`error`) y `data` JSON. Al conectar se envía
+        `retry: 3000`; si no hay cambios se emite un heartbeat `: ping` cada 15 s.
+        El header `Last-Event-ID` continúa la numeración tras una reconexión.
+        El stream termina en estado terminal o tras 10 minutos de seguridad.
+      parameters:
+        - $ref: "#/components/parameters/AnalysisId"
+        - name: Last-Event-ID
+          in: header
+          description: Último id recibido; el stream continúa desde ese valor + 1.
+          schema: { type: string }
+      responses:
+        "200":
+          description: Stream de eventos progress/done/error
+          content:
+            text/event-stream:
+              schema:
+                type: string
+              example: |
+                retry: 3000
+
+                id: 1
+                event: progress
+                data: {"id":"...","status":"running","progress":40,"stage":"candidatos","updated_at":"..."}
+
+                : ping
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/analyses/{analysis_id}/export:
+    get:
+      tags: [exportacion]
+      summary: Exportar resultado
+      parameters:
+        - $ref: "#/components/parameters/AnalysisId"
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [json, spec, srt, vtt]
+            default: json
+      responses:
+        "200":
+          description: Archivo exportado
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/Analysis"
+                  - type: array
+                    items:
+                      $ref: "#/components/schemas/SpecClip"
+            text/plain:
+              schema: { type: string }
+        "403":
+          $ref: "#/components/responses/FeatureDisabled"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/NotReady"
+
+  /api/analyses/{analysis_id}/clips/{clip_id}/srt:
+    get:
+      tags: [exportacion]
+      summary: Exportar los subtítulos SRT de un clip
+      parameters:
+        - $ref: "#/components/parameters/AnalysisId"
+        - name: clip_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Subtítulos SRT del clip
+          content:
+            application/x-subrip:
+              schema: { type: string }
+        "403":
+          $ref: "#/components/responses/FeatureDisabled"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/NotReady"
+
+  /api/flags:
+    get:
+      tags: [flags]
+      summary: Listar feature flags
+      responses:
+        "200":
+          description: Lista de flags
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FeatureFlag"
+    patch:
+      tags: [flags]
+      summary: Actualizar un feature flag
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, enabled]
+              properties:
+                name: { type: string }
+                enabled: { type: boolean }
+      responses:
+        "200":
+          description: Flag actualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeatureFlag"
+
+  /api/transcriptions:
+    get:
+      tags: [transcripcion]
+      summary: Listar transcripciones
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Lista paginada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscriptionList"
+    post:
+      tags: [transcripcion]
+      summary: Transcribir una ruta local
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TranscriptionPathRequest"
+      responses:
+        "202":
+          description: Transcripción encolada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscriptionAccepted"
+        "400":
+          $ref: "#/components/responses/InvalidMedia"
+        "503":
+          $ref: "#/components/responses/FFmpegUnavailable"
+
+  /api/transcriptions/upload:
+    post:
+      tags: [transcripcion]
+      summary: Subir un video y transcribirlo
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                model:
+                  type: string
+                  default: small
+                language:
+                  type: string
+                  default: auto
+      responses:
+        "202":
+          description: Transcripción encolada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscriptionAccepted"
+        "400":
+          $ref: "#/components/responses/InvalidMedia"
+        "413":
+          $ref: "#/components/responses/MediaTooLarge"
+        "503":
+          $ref: "#/components/responses/FFmpegUnavailable"
+
+  /api/transcriptions/{transcription_id}:
+    parameters:
+      - $ref: "#/components/parameters/TranscriptionId"
+    get:
+      tags: [transcripcion]
+      summary: Consultar una transcripción
+      responses:
+        "200":
+          description: Transcripción con su resultado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transcription"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [transcripcion]
+      summary: Borrar una transcripción y su video subido
+      responses:
+        "204":
+          description: Borrada
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/transcriptions/{transcription_id}/events:
+    parameters:
+      - $ref: "#/components/parameters/TranscriptionId"
+    get:
+      tags: [transcripcion]
+      summary: Progreso por SSE
+      responses:
+        "200":
+          description: Flujo de eventos `progress`, `done` o `error`
+          content:
+            text/event-stream:
+              schema:
+                type: string
+
+  /api/transcriptions/{transcription_id}/analyze:
+    parameters:
+      - $ref: "#/components/parameters/TranscriptionId"
+    post:
+      tags: [transcripcion]
+      summary: Crear un análisis desde una transcripción terminada
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TranscriptionAnalyzeRequest"
+      responses:
+        "202":
+          description: Análisis encolado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobAccepted"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/NotReady"
+
+components:
+  securitySchemes:
+    ApiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+  parameters:
+    AnalysisId:
+      name: analysis_id
+      in: path
+      required: true
+      schema: { type: string, pattern: "^[a-f0-9-]{36}$" }
+    TranscriptionId:
+      name: transcription_id
+      in: path
+      required: true
+      schema: { type: string, pattern: "^[a-f0-9-]{36}$" }
+  responses:
+    Unauthorized:
+      description: API key ausente o inválida
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Recurso no encontrado
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotReady:
+      description: El análisis todavía no terminó
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    FeatureDisabled:
+      description: Función desactivada por un feature flag local (`VC-2003`)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    InvalidTranscript:
+      description: Transcripción inválida
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    PayloadTooLarge:
+      description: Payload demasiado grande
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    ValidationError:
+      description: Parámetros fuera de rango
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    InvalidMedia:
+      description: Video inválido, inexistente o con extensión no soportada (`VC-1101`)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    MediaTooLarge:
+      description: Video demasiado grande (`VC-1102`)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    FFmpegUnavailable:
+      description: FFmpeg no disponible (`VC-1103`)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+  schemas:
+    Error:
+      type: object
+      required: [code, message, request_id]
+      properties:
+        code: { type: string, example: VC-1001 }
+        message: { type: string }
+        detail: { type: string }
+        request_id: { type: string }
+    Health:
+      type: object
+      required: [status, version, database, ollama]
+      properties:
+        status: { type: string, enum: [ok, degraded] }
+        version: { type: string }
+        database: { type: string, enum: [ok, error] }
+        ollama:
+          type: object
+          required: [available]
+          properties:
+            available: { type: boolean }
+            model: { type: string }
+            message: { type: string }
+    Config:
+      type: object
+      properties:
+        max_clips: { type: integer }
+        max_input_bytes: { type: integer }
+        platforms:
+          type: array
+          items: { type: string }
+        llm_enabled: { type: boolean }
+        flags:
+          type: array
+          items: { type: string }
+        whisper_models:
+          type: array
+          items: { type: string }
+        whisper_model: { type: string }
+        whisper_device: { type: string, enum: [cpu, cuda] }
+        whisper_language: { type: string }
+        upload_max_bytes: { type: integer }
+        ffmpeg_available: { type: boolean }
+    TranscriptionPathRequest:
+      type: object
+      required: [path]
+      properties:
+        path: { type: string }
+        model: { type: string, default: small }
+        language: { type: string, default: auto }
+    TranscriptionAccepted:
+      type: object
+      required: [id, status, events_url]
+      properties:
+        id: { type: string }
+        status: { type: string, enum: [queued, running] }
+        events_url: { type: string }
+    Transcription:
+      type: object
+      required: [id, status, progress, filename, model, device]
+      properties:
+        id: { type: string }
+        status: { type: string, enum: [queued, running, done, error] }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        progress: { type: integer, minimum: 0, maximum: 100 }
+        stage: { type: string }
+        filename: { type: string }
+        model: { type: string }
+        device: { type: string }
+        language: { type: string }
+        duration: { type: number }
+        error:
+          oneOf:
+            - $ref: "#/components/schemas/Error"
+            - type: "null"
+        transcript:
+          oneOf:
+            - type: object
+            - type: "null"
+    TranscriptionList:
+      type: object
+      required: [items, total, limit, offset]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Transcription"
+        total: { type: integer }
+        limit: { type: integer }
+        offset: { type: integer }
+    TranscriptionAnalyzeRequest:
+      type: object
+      properties:
+        platform:
+          type: string
+          enum: [tiktok, reels, shorts]
+          default: tiktok
+        max_clips:
+          type: integer
+          minimum: 1
+          maximum: 20
+          default: 5
+        use_llm: { type: boolean, default: true }
+        min_duration: { type: number, default: 15 }
+        max_duration: { type: number, default: 60 }
+    AnalysisRequest:
+      type: object
+      required: [transcript]
+      properties:
+        transcript:
+          oneOf:
+            - type: array
+              items: { type: object }
+            - type: object
+        platform:
+          type: string
+          enum: [tiktok, reels, shorts]
+          default: tiktok
+        max_clips:
+          type: integer
+          minimum: 1
+          maximum: 20
+          default: 5
+        use_llm:
+          type: boolean
+          default: true
+        min_duration:
+          type: number
+          minimum: 5
+          maximum: 180
+          default: 15
+        max_duration:
+          type: number
+          minimum: 10
+          maximum: 180
+          default: 60
+    JobAccepted:
+      type: object
+      required: [id, status]
+      properties:
+        id: { type: string }
+        status: { type: string, enum: [queued, running] }
+        events_url: { type: string }
+    Analysis:
+      type: object
+      required: [id, status, created_at]
+      properties:
+        id: { type: string }
+        status: { type: string, enum: [queued, running, done, error] }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        platform: { type: string }
+        progress: { type: integer, minimum: 0, maximum: 100 }
+        stage:
+          type: [string, "null"]
+          description: Etapa legible del trabajo (`queued`, `validando`, `preparando`, `candidatos`, `ganchos`, `clips`, `done`, `error`).
+        engine:
+          type: object
+          properties:
+            name: { type: string }
+            model: { type: string }
+            degraded: { type: boolean }
+            notes: { type: string }
+        error:
+          $ref: "#/components/schemas/Error"
+        clips:
+          type: array
+          items:
+            $ref: "#/components/schemas/Clip"
+    AnalysisList:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Analysis"
+        total: { type: integer }
+        limit: { type: integer }
+        offset: { type: integer }
+    SpecClip:
+      type: object
+      required: [start_time, end_time, hook, caption_text, hashtags]
+      properties:
+        start_time: { type: string }
+        end_time: { type: string }
+        hook: { type: string }
+        caption_text: { type: string }
+        hashtags:
+          type: array
+          items: { type: string }
+    FeatureFlag:
+      type: object
+      required: [name, enabled]
+      properties:
+        name: { type: string }
+        enabled: { type: boolean }
+        owner: { type: string }
+        expires_at: { type: ["string", "null"], format: date-time }
+        description: { type: string }
+    Clip:
+      type: object
+      required: [id, start_time, end_time, hook, caption_text, hashtags, score, reason, subtitles]
+      properties:
+        id: { type: string }
+        rank: { type: integer }
+        start_time: { type: string }
+        end_time: { type: string }
+        start_seconds: { type: number }
+        end_seconds: { type: number }
+        duration_seconds: { type: number }
+        platform: { type: string }
+        hook: { type: string }
+        title: { type: string }
+        description: { type: string }
+        caption_text: { type: string }
+        hashtags:
+          type: array
+          items: { type: string }
+        score: { type: number, minimum: 0, maximum: 1 }
+        reason: { type: string }
+        keywords:
+          type: array
+          items: { type: string }
+        subtitles:
+          type: array
+          items: { type: object }
+security:
+  - ApiKey: []

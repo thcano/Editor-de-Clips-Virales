@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://viralclip.local/schemas/transcripcion.schema.json",
+  "title": "Transcripción de entrada",
+  "description": "Transcripción de un video con marcas de tiempo por segmento y, opcionalmente, por palabra. Acepta un array raíz de segmentos o un documento con la clave segments.",
+  "oneOf": [
+    {
+      "type": "array",
+      "items": { "$ref": "#/$defs/segmento" },
+      "minItems": 1,
+      "maxItems": 20000
+    },
+    { "$ref": "#/$defs/documento" }
+  ],
+  "$defs": {
+    "tiempo": {
+      "description": "Segundos (número) o cadena HH:MM:SS(.mmm) / MM:SS(.mmm).",
+      "oneOf": [
+        { "type": "number", "minimum": 0, "maximum": 86400 },
+        {
+          "type": "string",
+          "pattern": "^\\d{1,2}:\\d{2}(:\\d{2})?(\\.\\d{1,3})?$"
+        }
+      ]
+    },
+    "palabra": {
+      "type": "object",
+      "required": ["word", "start", "end"],
+      "properties": {
+        "word": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "start": { "$ref": "#/$defs/tiempo" },
+        "end": { "$ref": "#/$defs/tiempo" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "additionalProperties": true
+    },
+    "segmento": {
+      "type": "object",
+      "required": ["start", "end", "text"],
+      "properties": {
+        "start": { "$ref": "#/$defs/tiempo" },
+        "end": { "$ref": "#/$defs/tiempo" },
+        "text": { "type": "string", "minLength": 1, "maxLength": 5000 },
+        "words": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/palabra" },
+          "maxItems": 500
+        }
+      },
+      "additionalProperties": true
+    },
+    "documento": {
+      "type": "object",
+      "required": ["segments"],
+      "properties": {
+        "language": { "type": "string", "maxLength": 10 },
+        "duration": { "$ref": "#/$defs/tiempo" },
+        "segments": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/segmento" },
+          "minItems": 1,
+          "maxItems": 20000
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

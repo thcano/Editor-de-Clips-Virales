@@ -1,0 +1,9 @@
+{
+  "language": "es",
+  "duration": 8.0,
+  "segments": [
+    { "start": 0.0, "end": 2.0, "text": "Uno dos tres" },
+    { "start": 2.0, "end": 5.0, "text": "Cuatro cinco seis siete" },
+    { "start": 5.0, "end": 8.0, "text": "Ocho nueve diez" }
+  ]
+}

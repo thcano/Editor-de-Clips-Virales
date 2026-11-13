@@ -1,0 +1,74 @@
+{
+  "version": "1.0",
+  "description": "Casos de oro para evaluar ganchos, metadatos, subtítulos y tiempos sin depender de Ollama.",
+  "cases": [
+    {
+      "case_id": "ventas-preguntar",
+      "descripcion": "Ventas consultivas: el error de hablar demasiado y el poder de preguntar.",
+      "platform": "tiktok",
+      "max_clips": 3,
+      "min_duration": 15,
+      "max_duration": 45,
+      "min_clips": 2,
+      "expect_keywords": ["ventas", "preguntar", "pregunta", "error"],
+      "transcript": [
+        {"start": 0, "end": 6, "text": "Nadie te cuenta esto: el 80% de las ventas se pierde por no preguntar."},
+        {"start": 6, "end": 12, "text": "El error que frena tus ventas es hablar demasiado."},
+        {"start": 12, "end": 18, "text": "Tienes que dejar de hablar y empezar a escuchar."},
+        {"start": 18, "end": 24, "text": "La pregunta más poderosa es: ¿qué te impide comprar hoy?"},
+        {"start": 24, "end": 30, "text": "Cuando la haces, el cliente te dice exactamente qué necesita."},
+        {"start": 30, "end": 36, "text": "Y tú dejas de adivinar. Dejas de improvisar."},
+        {"start": 36, "end": 42, "text": "Es un error brutal que te cuesta miles de euros cada mes."},
+        {"start": 42, "end": 48, "text": "Prueba esta semana: haz una sola pregunta y calla."},
+        {"start": 48, "end": 54, "text": "Vas a ver cómo cambia la conversación."},
+        {"start": 54, "end": 60, "text": "Guarda este video antes de que lo borre."},
+        {"start": 60, "end": 66, "text": "Y sígueme para más estrategias de ventas sin humo."},
+        {"start": 66, "end": 72, "text": "Porque vender no es convencer: es entender."}
+      ]
+    },
+    {
+      "case_id": "fitness-grasa",
+      "descripcion": "Fitness: fuerza y proteína por encima de contar calorías.",
+      "platform": "reels",
+      "max_clips": 3,
+      "min_duration": 15,
+      "max_duration": 45,
+      "min_clips": 2,
+      "expect_keywords": ["grasa", "proteína", "fuerza", "error"],
+      "transcript": [
+        {"start": 0, "end": 6, "text": "Nadie te dice esto sobre perder grasa: el 90% de las dietas fallan."},
+        {"start": 6, "end": 12, "text": "El error es comer menos y moverte menos."},
+        {"start": 12, "end": 18, "text": "Tienes que entrenar fuerza tres veces por semana."},
+        {"start": 18, "end": 24, "text": "La proteína es la clave para no perder músculo."},
+        {"start": 24, "end": 30, "text": "Deja de contar calorías y empieza a contar proteínas."},
+        {"start": 30, "end": 36, "text": "Es un error brutal que te mantiene estancado durante meses."},
+        {"start": 36, "end": 42, "text": "Prueba esto durante 30 días y verás el cambio."},
+        {"start": 42, "end": 48, "text": "No necesitas más cardio: necesitas más fuerza."},
+        {"start": 48, "end": 54, "text": "Guarda este video antes de que lo borre."},
+        {"start": 54, "end": 60, "text": "Y sígueme para más consejos de entrenamiento sin humo."}
+      ]
+    },
+    {
+      "case_id": "productividad-miedo",
+      "descripcion": "Productividad: elegir prioridades y empezar por lo que da miedo.",
+      "platform": "shorts",
+      "max_clips": 3,
+      "min_duration": 15,
+      "max_duration": 45,
+      "min_clips": 2,
+      "expect_keywords": ["productividad", "tiempo", "error", "concentración"],
+      "transcript": [
+        {"start": 0, "end": 6, "text": "El 80% de tu día se pierde en tareas que no importan."},
+        {"start": 6, "end": 12, "text": "Nadie te enseña esto: haz primero lo que más miedo te da."},
+        {"start": 12, "end": 18, "text": "La clave no es gestionar mejor el tiempo: es elegir mejor."},
+        {"start": 18, "end": 24, "text": "Tienes que dejar de responder mensajes cada cinco minutos."},
+        {"start": 24, "end": 30, "text": "El error es empezar el día con el correo."},
+        {"start": 30, "end": 36, "text": "Prueba esto: una hora sin distracciones antes de abrir el correo."},
+        {"start": 36, "end": 42, "text": "Vas a ver cómo cambia tu concentración."},
+        {"start": 42, "end": 48, "text": "Es un error brutal que te cuesta horas cada semana."},
+        {"start": 48, "end": 54, "text": "Guarda este video antes de que lo borre."},
+        {"start": 54, "end": 60, "text": "Y sígueme para más estrategias de productividad sin humo."}
+      ]
+    }
+  ]
+}

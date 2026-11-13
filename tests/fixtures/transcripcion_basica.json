@@ -1,0 +1,32 @@
+{
+  "language": "es",
+  "duration": 12.0,
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 3.0,
+      "text": "Esto es lo que nadie te cuenta sobre vender.",
+      "words": [
+        { "word": "Esto", "start": 0.0, "end": 0.3 },
+        { "word": "es", "start": 0.3, "end": 0.5 },
+        { "word": "lo", "start": 0.5, "end": 0.7 },
+        { "word": "que", "start": 0.7, "end": 0.9 },
+        { "word": "nadie", "start": 0.9, "end": 1.3 },
+        { "word": "te", "start": 1.3, "end": 1.5 },
+        { "word": "cuenta", "start": 1.5, "end": 1.9 },
+        { "word": "sobre", "start": 1.9, "end": 2.2 },
+        { "word": "vender", "start": 2.2, "end": 3.0 }
+      ]
+    },
+    {
+      "start": 3.0,
+      "end": 7.5,
+      "text": "El error que frena tus ventas es no escuchar."
+    },
+    {
+      "start": 7.5,
+      "end": 12.0,
+      "text": "Si quieres crecer, deja de hablar y empieza a preguntar."
+    }
+  ]
+}

@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://viralclip.local/schemas/salida.schema.json",
+  "title": "Salida de clips virales",
+  "description": "Contrato enriquecido v1.0. La exportación 'spec' devuelve solo start_time, end_time, hook, caption_text y hashtags.",
+  "type": "object",
+  "required": ["version", "generated_at", "source", "engine", "clips"],
+  "properties": {
+    "version": { "type": "string", "const": "1.0" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "source": { "$ref": "#/$defs/fuente" },
+    "engine": { "$ref": "#/$defs/motor" },
+    "clips": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/clip" },
+      "maxItems": 50
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "fuente": {
+      "type": "object",
+      "required": ["language", "duration", "segment_count"],
+      "properties": {
+        "language": { "type": "string" },
+        "duration": { "type": "number", "minimum": 0 },
+        "segment_count": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "motor": {
+      "type": "object",
+      "required": ["name", "degraded"],
+      "properties": {
+        "name": { "type": "string", "enum": ["heuristic", "heuristic+ollama"] },
+        "model": { "type": ["string", "null"] },
+        "degraded": { "type": "boolean" },
+        "notes": { "type": ["string", "null"] }
+      }
+    },
+    "palabra": {
+      "type": "object",
+      "required": ["word", "start", "end", "highlight"],
+      "properties": {
+        "word": { "type": "string" },
+        "start": { "type": "number", "minimum": 0 },
+        "end": { "type": "number", "minimum": 0 },
+        "highlight": { "type": "boolean" }
+      }
+    },
+    "subtitulo": {
+      "type": "object",
+      "required": ["index", "start", "end", "text", "words"],
+      "properties": {
+        "index": { "type": "integer", "minimum": 1 },
+        "start": { "type": "number", "minimum": 0 },
+        "end": { "type": "number", "minimum": 0 },
+        "text": { "type": "string" },
+        "words": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/palabra" }
+        }
+      }
+    },
+    "clip": {
+      "type": "object",
+      "required": [
+        "id",
+        "rank",
+        "start_time",
+        "end_time",
+        "start_seconds",
+        "end_seconds",
+        "duration_seconds",
+        "platform",
+        "hook",
+        "title",
+        "description",
+        "caption_text",
+        "hashtags",
+        "score",
+        "reason",
+        "keywords",
+        "subtitles"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^clip_[0-9]{3,}$" },
+        "rank": { "type": "integer", "minimum": 1 },
+        "start_time": {
+          "type": "string",
+          "pattern": "^(\\d{1,2}:)?\\d{2}:\\d{2}$"
+        },
+        "end_time": {
+          "type": "string",
+          "pattern": "^(\\d{1,2}:)?\\d{2}:\\d{2}$"
+        },
+        "start_seconds": { "type": "number", "minimum": 0 },
+        "end_seconds": { "type": "number", "minimum": 0 },
+        "duration_seconds": { "type": "number", "exclusiveMinimum": 0 },
+        "platform": {
+          "type": "string",
+          "enum": ["tiktok", "reels", "shorts"]
+        },
+        "hook": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "description": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "caption_text": { "type": "string", "minLength": 1 },
+        "hashtags": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^#[\\wáéíóúñü]+$" },
+          "maxItems": 12,
+          "uniqueItems": true
+        },
+        "score": { "type": "number", "minimum": 0, "maximum": 1 },
+        "reason": { "type": "string", "minLength": 1, "maxLength": 300 },
+        "keywords": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "subtitles": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/subtitulo" }
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

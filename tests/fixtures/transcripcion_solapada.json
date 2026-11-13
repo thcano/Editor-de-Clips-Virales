@@ -1,0 +1,6 @@
+{
+  "segments": [
+    { "start": 0.0, "end": 5.0, "text": "Uno" },
+    { "start": 3.5, "end": 8.0, "text": "Dos" }
+  ]
+}
