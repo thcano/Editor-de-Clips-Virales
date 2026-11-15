@@ -73,6 +73,76 @@ def test_static_missing_file_returns_404(client: TestClient) -> None:
     assert client.get("/static/no-existe.js").status_code == 404
 
 
+def test_static_assets_force_revalidation(client: TestClient) -> None:
+    """Los assets deben revalidarse siempre contra el servidor.
+
+    Sin ``Cache-Control`` el navegador aplica caché heurística y puede
+    devolver un ``styles.css`` antiguo sin preguntar al servidor.
+    """
+
+    for path in ("/static/styles.css", "/static/app.js", "/static/favicon.svg"):
+        response = client.get(path)
+        assert response.status_code == 200
+        assert response.headers["cache-control"] == "no-cache"
+        assert response.headers["etag"]
+
+
+def test_static_etag_is_stable_and_allows_304(client: TestClient) -> None:
+    first = client.get("/static/styles.css")
+    second = client.get("/static/styles.css")
+    assert first.headers["etag"] == second.headers["etag"]
+
+    revalidated = client.get(
+        "/static/styles.css",
+        headers={"If-None-Match": first.headers["etag"]},
+    )
+    assert revalidated.status_code == 304
+    assert revalidated.content == b""
+
+
+def test_static_ignores_if_modified_since(client: TestClient) -> None:
+    """``If-Modified-Since`` no debe poder confirmar un asset obsoleto.
+
+    Tras reinstalar o clonar el repo la fecha del fichero puede ser anterior
+    a la de la copia cacheada; si el servidor aceptase esa fecha respondería
+    304 y el navegador conservaría el diseño anterior.
+    """
+
+    response = client.get(
+        "/static/styles.css",
+        headers={"If-Modified-Since": "Wed, 21 Oct 2099 07:28:00 GMT"},
+    )
+    assert response.status_code == 200
+    assert "kin-marquee" in response.text
+
+
+def test_static_accepts_versioned_query(client: TestClient) -> None:
+    response = client.get("/static/styles.css?v=abc123")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/css")
+
+
+def test_root_versions_asset_urls(client: TestClient) -> None:
+    """Las URLs de los assets incluyen la versión para evitar cachés viejas."""
+
+    body = client.get("/").text
+    assert "/static/styles.css?v=" in body
+    assert "/static/app.js?v=" in body
+    assert "/static/favicon.svg?v=" in body
+
+
+def test_root_clears_stale_cache_once_per_version(client: TestClient) -> None:
+    """La primera carga purga la caché; las siguientes ya no hace falta."""
+
+    first = client.get("/")
+    assert first.headers["Clear-Site-Data"] == '"cache"'
+    assert "viralclip_assets=" in first.headers["set-cookie"]
+
+    cookie = first.headers["set-cookie"].split(";")[0]
+    second = client.get("/", headers={"Cookie": cookie})
+    assert "Clear-Site-Data" not in second.headers
+
+
 def test_html_has_accessible_labels(client: TestClient) -> None:
     body = client.get("/").text
 

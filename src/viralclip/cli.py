@@ -16,6 +16,7 @@ import uvicorn
 
 from . import __version__
 from .api.app import create_app
+from .assets import AssetVersion, versioned_url
 from .config import Settings
 
 DEFAULT_START_TIMEOUT = 10.0
@@ -40,8 +41,20 @@ def resolve_port(host: str, port: int) -> int:
     return free_port(host)
 
 
-def build_url(host: str, port: int) -> str:
-    return f"http://{host}:{port}"
+def build_url(host: str, port: int, version: str | None = None) -> str:
+    """Construye la URL de la interfaz.
+
+    Cuando se indica ``version`` se añade como parámetro ``v``. El navegador
+    guarda la página de entrada en su caché y, si esa copia está vigente, no
+    vuelve a preguntar al servidor: seguiría pidiendo los assets con la URL
+    antigua y mostrando el diseño anterior. Abrir con una URL versionada
+    garantiza que la primera respuesta es siempre la vigente.
+    """
+
+    url = f"http://{host}:{port}"
+    if version:
+        return versioned_url(url, version)
+    return url
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -187,13 +200,15 @@ def serve(
         raise RuntimeError("El servidor no arrancó a tiempo.")
 
     url = build_url(host, port)
+    asset_version = AssetVersion().get()
+    browser_url = build_url(host, port, asset_version)
     print(f"Editor de Clips Virales {__version__}", flush=True)
     print(f"Interfaz: {url}", flush=True)
     print(f"API docs: {url}/docs", flush=True)
     print("Pulsa Ctrl+C para detener.", flush=True)
 
     if open_browser:
-        browser_open(url)
+        browser_open(browser_url)
 
     try:
         while thread.is_alive():

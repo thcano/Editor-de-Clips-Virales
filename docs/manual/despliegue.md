@@ -1,6 +1,6 @@
 # Manual de despliegue — Editor de Clips Virales
 
-> Versión documentada: **0.4.0**
+> Versión documentada: **0.4.1**
 > Audiencia: personas encargadas de instalar, distribuir y dar soporte al producto.
 > Cubre los tres escenarios de despliegue: **portable**, **instalación en el equipo** y
 > **servidor local compartido**.
@@ -78,24 +78,24 @@ dist/
 
 1. Comprime la **carpeta completa** `ViralClip/`:
    ```powershell
-   Compress-Archive -Path dist\ViralClip -DestinationPath ViralClip-0.4.0-win64.zip
+   Compress-Archive -Path dist\ViralClip -DestinationPath ViralClip-0.4.1-win64.zip
    ```
 2. Publica el `.zip` (GitHub Releases, intranet, drive compartido…).
 3. Distribuye **el ZIP**, nunca el `.exe` suelto: sin `_internal/` la app no arranca.
 
 > **Límite de GitHub:** el repositorio no admite ficheros de más de 100 MB en un push, así
 > que el ZIP se publica como **GitHub Release** y no se versiona en el árbol. La release
-> 0.4.0 está en
-> <https://github.com/thcano/Editor-de-Clips-Virales/releases/tag/v0.4.0> y el artefacto
+> 0.4.1 está en
+> <https://github.com/thcano/Editor-de-Clips-Virales/releases/tag/v0.4.1> y el artefacto
 > en
-> <https://github.com/thcano/Editor-de-Clips-Virales/releases/download/v0.4.0/ViralClip-0.4.0-win64.zip>.
+> <https://github.com/thcano/Editor-de-Clips-Virales/releases/download/v0.4.1/ViralClip-0.4.1-win64.zip>.
 
 Con la CLI de GitHub:
 
 ```powershell
-gh release create v0.4.0 dist\ViralClip-0.4.0-win64.zip `
+gh release create v0.4.1 dist\ViralClip-0.4.1-win64.zip `
   --repo thcano/Editor-de-Clips-Virales `
-  --title "Editor de Clips Virales 0.4.0 - portable Windows" `
+  --title "Editor de Clips Virales 0.4.1 - portable Windows" `
   --notes-file notas.md
 ```
 
@@ -147,7 +147,7 @@ El directorio de trabajo del acceso directo determina dónde se busca el `.env`.
 
 ```powershell
 cd C:\Apps\ViralClip
-.\ViralClip.exe --version        # → viralclip 0.4.0
+.\ViralClip.exe --version        # → viralclip 0.4.1
 .\ViralClip.exe --no-browser --port 8766
 ```
 
@@ -307,7 +307,7 @@ Para restaurar, basta con volver a copiar el directorio.
 
 Checklist:
 
-- [ ] `ViralClip.exe --version` responde `viralclip 0.4.0`
+- [ ] `ViralClip.exe --version` responde `viralclip 0.4.1`
 - [ ] El navegador muestra la interfaz con el estilo Kinetic Typography
 - [ ] El título de la pestaña es "Editor de Clips Virales"
 - [ ] `/api/health` responde `200`

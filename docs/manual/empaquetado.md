@@ -1,6 +1,6 @@
 # Empaquetado ejecutable (Windows)
 
-> Versión documentada: **0.4.0**
+> Versión documentada: **0.4.1**
 > Esta guía explica cómo generar `ViralClip.exe` a partir del código fuente y cómo usarlo.
 
 ---
@@ -25,7 +25,7 @@ dist/
 - Es **portable**: puedes mover la carpeta `ViralClip` completa a otra ruta o equipo.
 - Debes distribuir **toda la carpeta**, no solo el `.exe`.
 
-Tamaño de referencia del build verificado (0.4.0, Windows 11 x64, Python 3.14):
+Tamaño de referencia del build verificado (0.4.1, Windows 11 x64, Python 3.14):
 
 | Elemento | Tamaño |
 |---|---|
@@ -219,7 +219,7 @@ Comprobaciones rápidas:
 dist\ViralClip\ViralClip.exe --version
 ```
 
-Debe responder con la versión (por ejemplo `viralclip 0.4.0`).
+Debe responder con la versión (por ejemplo `viralclip 0.4.1`).
 
 Arranque y comprobación HTTP:
 

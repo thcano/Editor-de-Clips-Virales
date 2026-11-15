@@ -73,6 +73,7 @@ def test_resolve_port_zero_returns_free_port() -> None:
 
 def test_build_url() -> None:
     assert cli.build_url("127.0.0.1", 8000) == "http://127.0.0.1:8000"
+    assert cli.build_url("127.0.0.1", 8000, "abc123") == "http://127.0.0.1:8000?v=abc123"
 
 
 def test_serve_opens_browser_and_stops() -> None:
@@ -89,7 +90,11 @@ def test_serve_opens_browser_and_stops() -> None:
 
     assert server.run_called is True
     assert server.should_exit is True
-    assert opened == ["http://127.0.0.1:8123"]
+    # El navegador se abre con una URL versionada para que una copia en caché
+    # de la interfaz no impida ver la versión vigente del diseño.
+    assert len(opened) == 1
+    assert opened[0].startswith("http://127.0.0.1:8123?v=")
+    assert len(opened[0].split("v=")[1]) == 10
 
 
 def test_serve_without_browser() -> None:

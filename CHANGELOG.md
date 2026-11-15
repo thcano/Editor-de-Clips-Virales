@@ -7,6 +7,43 @@ adopta [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.4.1] — 2026-11-15
+
+### Corregido
+
+- **El navegador se quedaba con el diseño anterior** (el estilo previo a Kinetic
+  Typography) aunque el servidor ya enviase el CSS nuevo. La causa estaba en la
+  política de caché HTTP, no en los estilos:
+  - `StaticFiles` de Starlette no envía `Cache-Control`, de modo que el navegador
+    aplicaba *caché heurística* (10 % de la antigüedad del fichero) y podía
+    devolver el `styles.css` antiguo **sin contactar con el servidor**. Como la
+    app se sirve siempre desde `127.0.0.1`, el ejecutable y el clon del
+    repositorio compartían origen y URL: la copia obsoleta se quedaba pegada en
+    ambos.
+  - Starlette aceptaba `If-Modified-Since` y respondía `304 Not Modified` cuando
+    la fecha de la copia cacheada era igual o posterior al `Last-Modified` del
+    fichero. Tras reinstalar o clonar el repo la fecha del fichero puede ser
+    *anterior*, de modo que el servidor confirmaba como "no modificado" un CSS
+    obsoleto y el cliente conservaba el diseño viejo.
+
+### Añadido
+
+- **Versionado de assets por hash del contenido** (`src/viralclip/assets.py`): las
+  URLs de `styles.css`, `app.js` y `favicon.svg` incluyen `?v=<hash>`, así que
+  cualquier cambio produce una URL nueva que el navegador no puede reutilizar.
+- **El lanzador abre el navegador en una URL versionada**, de modo que la propia
+  página de entrada nunca se resuelve desde una caché obsoleta.
+- **Purga de la caché obsoleta**: la respuesta de `/` envía `Clear-Site-Data:
+  "cache"` cuando la versión de los assets ha cambiado (controlado con la cookie
+  `viralclip_assets`), eliminando cualquier copia del diseño anterior.
+- **`ETag` por hash del contenido** en los assets: la revalidación solo se acepta
+  por `If-None-Match`; `If-Modified-Since` se ignora. Un `304` significa siempre
+  "los bytes son idénticos".
+- **`Cache-Control: no-cache`** en todos los assets estáticos.
+- 6 tests de regresión que cubren la caché, el versionado y el `ETag`.
+
+---
+
 ## [0.4.0] — 2026-11-15
 
 ### Añadido
@@ -85,4 +122,5 @@ adopta [Semantic Versioning](https://semver.org/lang/es/).
 - Estructura inicial del proyecto: arquitectura, contratos JSON y esqueleto de la CLI.
 - Decisiones de arquitectura documentadas en [`docs/adr/`](docs/adr/).
 
+[0.4.1]: https://github.com/thcano/Editor-de-Clips-Virales/releases/tag/v0.4.1
 [0.4.0]: https://github.com/thcano/Editor-de-Clips-Virales/releases/tag/v0.4.0

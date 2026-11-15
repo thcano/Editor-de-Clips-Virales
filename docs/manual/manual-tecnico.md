@@ -1,6 +1,6 @@
 # Manual técnico — Editor de Clips Virales
 
-> Versión documentada: **0.4.0**
+> Versión documentada: **0.4.1**
 > Audiencia: equipo de desarrollo, revisores de código y mantenedores del proyecto.
 > Documento de referencia para comprendre, modificar, construir y dar soporte al sistema.
 
@@ -58,6 +58,7 @@ Editor de Clips Virales/
 │  ├─ __init__.py              Versión (__version__)
 │  ├─ cli.py                   CLI: serve, --transcribe, --render
 │  ├─ config.py                Settings desde variables de entorno
+│  ├─ assets.py                Versionado y caché de los assets del frontend
 │  ├─ desktop.py               Rutas de datos por usuario (paquete congelado)
 │  ├─ analyzer.py              Núcleo de análisis: ganchos, score, razón
 │  ├─ platform.py              Adaptadores por red social (TikTok/Reels/Shorts)
@@ -228,6 +229,50 @@ connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'
 cargar una fuente desde un CDN**. Por eso `src/viralclip/web/fonts/` incluye Syne y
 JetBrains Mono autoalojadas (woff2 variables, 66 KB en total). Consecuencia práctica: la
 app funciona **sin red** y sin peticiones a terceros.
+
+### Caché de los assets: por qué el diseño se quedaba obsoleto
+
+Un frontend sin *build step* tiene una trampa: los ficheros de `web/` son el
+"compilado" de la aplicación. Si el navegador los cachea, un cambio de diseño no
+llega a verse hasta que la caché expira.
+
+El problema tiene **dos causas independientes**, ambas resueltas en `api/app.py` y
+`assets.py`:
+
+| Causa | Comportamiento del navegador | Solución |
+|---|---|---|
+| `StaticFiles` de Starlette no envía `Cache-Control` | El navegador aplica **caché heurística** (10 % de la antigüedad del fichero) y puede devolver el `styles.css` antiguo **sin contactar con el servidor** | `Cache-Control: no-cache` + `Pragma` + `Expires: 0` en todos los assets |
+| Starlette acepta `If-Modified-Since` | Responde `304` si la fecha cacheada es ≥ que el `Last-Modified` del fichero. Tras reinstalar o clonar el repo la fecha del fichero puede ser **anterior**, así que el servidor confirmaba como "no modificado" un CSS obsoleto | La revalidación solo se acepta por **`ETag`**, calculado sobre el **hash del contenido**; `If-Modified-Since` se ignora |
+
+Como la app se sirve siempre desde `127.0.0.1`, el ejecutable y el clon del
+repositorio comparten origen y URL: una copia obsoleta se quedaba pegada en ambos.
+
+La solución completa añade tres capas (`src/viralclip/assets.py`):
+
+1. **Versionado por hash.** `AssetVersion.get()` calcula un hash corto del
+   contenido de `styles.css`, `app.js`, `favicon.svg` y las fuentes. Ese valor se
+   añade a las URLs (`?v=c174d578e6`), de modo que cualquier cambio produce una
+   URL **nueva** que el navegador no puede reutilizar.
+2. **URL de entrada versionada.** El lanzador (`cli.py::serve`) abre el navegador
+   en `http://127.0.0.1:8000/?v=<hash>`. Es imprescindible: si la propia página
+   de entrada está cacheada, el navegador no pide nada y nunca ve las URLs
+   versionadas.
+3. **Purga de la caché obsoleta.** La respuesta de `/` envía `Clear-Site-Data:
+   "cache"` cuando la versión ha cambiado, controlado con la cookie
+   `viralclip_assets`. Así desaparece cualquier copia del diseño anterior y la
+   URL sin parámetro también funciona.
+
+> **Consecuencia:** un `304` significa siempre "los bytes son idénticos". Si el
+> navegador no puede compararlos por `ETag`, recibe el fichero completo (200)
+> en lugar de un `304` engañoso.
+
+Comprobación rápida tras tocar el CSS:
+
+```powershell
+curl -s -D - -o NUL http://127.0.0.1:8000/static/styles.css
+# cache-control: no-cache
+# etag: "17965603b93efa021b36102fc1eb624e"
+```
 
 ---
 

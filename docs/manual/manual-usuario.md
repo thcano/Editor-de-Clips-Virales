@@ -1,6 +1,6 @@
 # Manual de usuario — Editor de Clips Virales
 
-> Versión documentada: **0.4.0**
+> Versión documentada: **0.4.1**
 > Producto local-first: el análisis y los datos se quedan en tu equipo.
 > Interfaz con estilo **Kinetic Typography**: la tipografía se mueve y es la protagonista.
 
@@ -368,6 +368,30 @@ Los cambios se aplican al instante en la pestaña.
 ---
 
 ## 12. Solución de problemas
+
+### La interfaz se ve con el diseño anterior
+
+Si tras actualizar la app sigues viendo el diseño previo (fondo claro, tipografía
+del sistema) en lugar del estilo **Kinetic Typography**, el navegador tiene una
+copia antigua de `styles.css` guardada.
+
+**Solución:** abre la interfaz desde el enlace que imprime la consola al
+arrancar. La app abre el navegador en una URL versionada
+(`http://127.0.0.1:8000/?v=...`) y además pide al navegador que vacíe su caché
+la primera vez, de modo que el diseño antiguo desaparece por completo.
+
+Si aun así persistiera:
+
+1. Pulsa `Ctrl+F5` (recarga forzada) o `Ctrl+Shift+R`.
+2. Cierra **todas** las pestañas de la app y vuelve a abrirla.
+3. Como último recurso, borra los datos del sitio en
+   *Configuración → Privacidad → Cookies y datos de sitios → Borrar datos* para
+   `127.0.0.1:8000`.
+
+> Desde la **versión 0.4.1** esto ya no debería ocurrir: los assets se sirven con
+> `Cache-Control: no-cache`, con `ETag` calculado sobre el hash del contenido y
+> con URLs versionadas. El detalle técnico está en el
+> [manual técnico](manual-tecnico.md#caché-de-los-assets-por-qué-el-diseño-se-quedaba-obsoleto).
 
 ### Ollama no disponible
 
