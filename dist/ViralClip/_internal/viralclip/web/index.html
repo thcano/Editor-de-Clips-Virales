@@ -7,7 +7,7 @@
       name="description"
       content="Editor local de clips virales: transcribe videos con Whisper y genera ganchos, subtítulos y hashtags."
     />
-    <meta name="color-scheme" content="light dark" />
+    <meta name="color-scheme" content="dark" />
     <title>Editor de Clips Virales</title>
     <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/static/styles.css" />
@@ -16,46 +16,73 @@
   <body>
     <a class="skip-link" href="#contenido">Saltar al contenido</a>
 
-    <header class="site-header">
-      <div class="brand">
-        <svg
-          class="brand-mark"
-          viewBox="0 0 48 48"
-          role="img"
-          aria-label="Logotipo de Editor de Clips Virales"
-        >
-          <rect x="3" y="8" width="42" height="32" rx="8" fill="currentColor" opacity="0.14" />
-          <path d="M20 17v14l12-7-12-7Z" fill="currentColor" />
-          <path
-            d="M9 14v20M39 14v20"
-            stroke="currentColor"
-            stroke-width="3"
-            stroke-linecap="round"
-          />
-        </svg>
-        <div>
-          <h1>Editor de Clips Virales</h1>
-          <p class="tagline">
-            De un video a ganchos, subtítulos y hashtags listos para publicar.
-          </p>
-        </div>
-      </div>
-      <div class="header-actions">
-        <span id="health-badge" class="badge badge-neutral" role="status" aria-live="polite">
-          Comprobando estado…
-        </span>
-        <button id="open-settings" class="btn btn-ghost" type="button">
-          Ajustes
-        </button>
-      </div>
-    </header>
+    <div class="app-bg" aria-hidden="true"></div>
 
-    <main id="contenido" class="layout" tabindex="-1">
-      <section class="panel" aria-labelledby="transcribe-title">
-        <h2 id="transcribe-title">Transcribir video</h2>
-        <p class="panel-intro">
-          Whisper y FFmpeg se ejecutan en tu equipo. El audio no sale de aquí.
-        </p>
+    <div class="app-shell">
+      <header class="site-header">
+        <div class="site-header-inner">
+          <div class="brand">
+            <svg
+              class="brand-mark"
+              viewBox="0 0 48 48"
+              role="img"
+              aria-label="Logotipo de Editor de Clips Virales"
+            >
+              <path d="M20 15v18l15-9-15-9Z" fill="currentColor" />
+              <path
+                d="M9 12v24M39 12v24"
+                stroke="currentColor"
+                stroke-width="3"
+                stroke-linecap="round"
+              />
+            </svg>
+            <div class="brand-text">
+              <h1>Editor de Clips Virales</h1>
+              <p class="tagline">
+                De un video a ganchos, subtítulos y hashtags listos para publicar.
+              </p>
+            </div>
+          </div>
+          <div class="header-actions">
+            <span id="health-badge" class="badge badge-neutral" role="status" aria-live="polite">
+              Comprobando estado…
+            </span>
+            <button id="open-settings" class="btn btn-ghost" type="button">
+              Ajustes
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main id="contenido" class="layout" tabindex="-1">
+        <section class="hero" aria-labelledby="hero-title">
+          <span class="hero-kicker">interaccion · local-first</span>
+          <h2 class="hero-title" id="hero-title">
+            Clips que <span class="hero-rotate" aria-hidden="true">se mueven</span>
+          </h2>
+          <span class="hero-technical">Tipografía cinética</span>
+          <p class="hero-summary">
+            La tipografía se mueve: marquesinas, palabras que rotan y ritmo visual en
+            lugar de imágenes. Analiza, transcribe y renderiza tus clips sin que nada
+            salga de tu equipo.
+          </p>
+          <div class="hero-glow" aria-hidden="true"></div>
+        </section>
+
+        <div class="marquee" aria-hidden="true">
+          <div class="marquee-track">
+            <span>Transcribe · Analiza · Ganchos · Subtítulos · Hashtags · Renderiza ·</span>
+            <span>Transcribe · Analiza · Ganchos · Subtítulos · Hashtags · Renderiza ·</span>
+          </div>
+        </div>
+
+        <section class="panel" aria-labelledby="transcribe-title">
+          <div class="panel-head">
+            <h2 id="transcribe-title"><span class="section-num">01</span> Transcribir video</h2>
+          </div>
+          <p class="panel-intro">
+            Whisper y FFmpeg se ejecutan en tu equipo. El audio no sale de aquí.
+          </p>
 
         <form id="transcribe-form" novalidate>
           <div class="field">
@@ -148,7 +175,9 @@
       </section>
 
       <section class="panel" aria-labelledby="upload-title">
-        <h2 id="upload-title">Nuevo análisis</h2>
+        <div class="panel-head">
+          <h2 id="upload-title"><span class="section-num">02</span> Nuevo análisis</h2>
+        </div>
         <p class="panel-intro">
           Carga la transcripción en JSON o pégala. Nada sale de tu equipo.
         </p>
@@ -258,7 +287,7 @@
 
       <section class="panel" aria-labelledby="history-title">
         <div class="panel-head">
-          <h2 id="history-title">Historial</h2>
+          <h2 id="history-title"><span class="section-num">03</span> Historial</h2>
           <button id="refresh-history" class="btn btn-ghost" type="button">
             Actualizar
           </button>
@@ -274,7 +303,9 @@
         hidden
       >
         <div class="panel-head">
-          <h2 id="detail-title" tabindex="-1">Resultado</h2>
+          <h2 id="detail-title" tabindex="-1">
+            <span class="section-num">04</span> Resultado
+          </h2>
           <button id="close-detail" class="btn btn-ghost" type="button">
             Cerrar
           </button>
@@ -296,14 +327,18 @@
           Todavía no hay clips para mostrar.
         </p>
       </section>
-    </main>
+      </main>
 
-    <footer class="site-footer">
-      <p>
-        Local-first: análisis y datos se quedan en tu equipo. Sin telemetría ni nube por
-        defecto.
-      </p>
-    </footer>
+      <footer class="site-footer">
+        <p>
+          <strong>Editor de Clips Virales</strong> · local-first · offline
+        </p>
+        <p>
+          Local-first: análisis y datos se quedan en tu equipo. Sin telemetría ni nube por
+          defecto.
+        </p>
+      </footer>
+    </div>
 
     <dialog id="settings-dialog" aria-labelledby="settings-title">
       <form id="settings-form" method="dialog">
@@ -364,6 +399,43 @@
             Copiar texto
           </button>
           <a class="btn btn-small clip-srt" href="#" download>Descargar SRT</a>
+        </div>
+        <div class="clip-render">
+          <div class="render-controls">
+            <label class="render-path-label">
+              <span>Video de origen</span>
+              <input
+                class="render-path"
+                type="text"
+                placeholder="C:\ruta\al\video.mp4"
+                autocomplete="off"
+              />
+            </label>
+            <button class="btn btn-small btn-primary render-btn" type="button">
+              Renderizar clip
+            </button>
+          </div>
+          <p class="render-source help" hidden></p>
+          <div class="render-progress" hidden>
+            <progress class="render-progress-bar" max="100" value="0"></progress>
+            <span class="render-stage"></span>
+          </div>
+          <div class="render-result" hidden>
+            <video class="render-video" controls preload="metadata"></video>
+            <img class="render-thumb" alt="Miniatura del clip" hidden />
+            <div class="render-links">
+              <a class="btn btn-small render-download" href="#" download>
+                Descargar MP4
+              </a>
+              <a class="btn btn-small render-thumb-download" href="#" download>
+                Descargar miniatura
+              </a>
+              <button class="btn btn-small btn-ghost render-delete" type="button">
+                Borrar render
+              </button>
+            </div>
+          </div>
+          <p class="render-status status" role="status" aria-live="polite"></p>
         </div>
       </li>
     </template>

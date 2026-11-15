@@ -15,6 +15,7 @@ const state = {
   transcription: null,
   transcriptionEventSource: null,
   transcriptionPollTimer: null,
+  renderWatchers: [],
 };
 
 const $ = (id) => document.getElementById(id);
@@ -564,6 +565,7 @@ function markActiveHistory() {
 async function openDetail(id, { focus = true } = {}) {
   state.activeId = id;
   stopWatching();
+  stopRenderWatchers();
   detail.hidden = false;
   detailTitle.textContent = "Resultado";
   detailMeta.replaceChildren();
@@ -654,6 +656,7 @@ function renderDetail(job) {
   }
 
   applyFlags();
+  void hydrateRenders(job.id);
 }
 
 function renderClip(clip, analysisId) {
@@ -692,13 +695,354 @@ function renderClip(clip, analysisId) {
     downloadFile(srtPath, `${clip.id}.srt`);
   };
 
+  card.dataset.clipId = clip.id;
+  setupRenderControls(card, clip, analysisId);
+
   return fragment;
+}
+
+/* ------------------------------------------------------------------ */
+/* Renderizado de clips                                                */
+/* ------------------------------------------------------------------ */
+
+function renderElements(card) {
+  return {
+    controls: card.querySelector(".render-controls"),
+    pathLabel: card.querySelector(".render-path-label"),
+    pathInput: card.querySelector(".render-path"),
+    sourceNote: card.querySelector(".render-source"),
+    button: card.querySelector(".render-btn"),
+    progressWrap: card.querySelector(".render-progress"),
+    progressBar: card.querySelector(".render-progress-bar"),
+    stage: card.querySelector(".render-stage"),
+    result: card.querySelector(".render-result"),
+    video: card.querySelector(".render-video"),
+    thumb: card.querySelector(".render-thumb"),
+    download: card.querySelector(".render-download"),
+    thumbDownload: card.querySelector(".render-thumb-download"),
+    deleteBtn: card.querySelector(".render-delete"),
+    status: card.querySelector(".render-status"),
+  };
+}
+
+function setupRenderControls(card, clip, analysisId) {
+  const els = renderElements(card);
+  const job = state.currentJob;
+  if (job && job.source_path) {
+    els.pathLabel.hidden = true;
+    els.sourceNote.hidden = false;
+    els.sourceNote.textContent = `Origen automático: ${job.source_path}`;
+  }
+
+  els.button.addEventListener("click", async () => {
+    const videoPath = els.pathInput.value.trim();
+    if (!videoPath && !(state.currentJob && state.currentJob.source_path)) {
+      setStatus(
+        els.status,
+        "Indica la ruta del video de origen para renderizar.",
+        "error",
+      );
+      return;
+    }
+
+    els.button.disabled = true;
+    setStatus(els.status, "Enviando render…");
+    els.progressWrap.hidden = false;
+    els.progressBar.value = 0;
+    els.stage.textContent = "en cola";
+    els.result.hidden = true;
+
+    const body = {};
+    if (videoPath) {
+      body.video_path = videoPath;
+    }
+    try {
+      const accepted = await api(
+        `/api/analyses/${encodeURIComponent(analysisId)}/clips/${encodeURIComponent(clip.id)}/render`,
+        { method: "POST", body: JSON.stringify(body) },
+      );
+      card.dataset.renderId = accepted.id;
+      setStatus(els.status, "Render encolado.");
+      watchRender(accepted.id, card);
+    } catch (error) {
+      els.button.disabled = false;
+      els.progressWrap.hidden = true;
+      setStatus(els.status, describeError(error), "error");
+    }
+  });
+
+  els.deleteBtn.addEventListener("click", async () => {
+    const renderId = card.dataset.renderId;
+    if (!renderId) {
+      return;
+    }
+    if (!window.confirm("¿Borrar el video renderizado y su miniatura?")) {
+      return;
+    }
+    try {
+      await api(`/api/renders/${encodeURIComponent(renderId)}`, {
+        method: "DELETE",
+      });
+      delete card.dataset.renderId;
+      resetRenderCard(card);
+      setStatus(els.status, "Render borrado.");
+      showToast("Render borrado.");
+    } catch (error) {
+      setStatus(els.status, describeError(error), "error");
+    }
+  });
+
+  els.download.addEventListener("click", (event) => {
+    event.preventDefault();
+    if (els.download.dataset.path) {
+      downloadFile(
+        els.download.dataset.path,
+        `${clip.id}-${String(card.dataset.renderId || "").slice(0, 8)}.mp4`,
+      );
+    }
+  });
+  els.thumbDownload.addEventListener("click", (event) => {
+    event.preventDefault();
+    if (els.thumbDownload.dataset.path) {
+      downloadFile(
+        els.thumbDownload.dataset.path,
+        `${clip.id}-${String(card.dataset.renderId || "").slice(0, 8)}.jpg`,
+      );
+    }
+  });
+}
+
+function resetRenderCard(card) {
+  const els = renderElements(card);
+  els.button.disabled = false;
+  els.progressWrap.hidden = true;
+  els.progressBar.value = 0;
+  els.stage.textContent = "";
+  els.result.hidden = true;
+  els.video.removeAttribute("src");
+  els.video.load();
+  els.thumb.removeAttribute("src");
+  els.thumb.hidden = true;
+  els.download.dataset.path = "";
+  els.thumbDownload.dataset.path = "";
+  els.download.hidden = true;
+  els.thumbDownload.hidden = true;
+  els.deleteBtn.hidden = true;
+}
+
+async function fetchObjectUrl(path) {
+  const headers = new Headers();
+  if (state.apiKey) {
+    headers.set("X-API-Key", state.apiKey);
+  }
+  const response = await fetch(path, { headers });
+  if (!response.ok) {
+    throw new ApiError(response.status, null);
+  }
+  return URL.createObjectURL(await response.blob());
+}
+
+async function attachMedia(element, path) {
+  if (!path) {
+    element.removeAttribute("src");
+    element.hidden = true;
+    return;
+  }
+  if (!state.apiKey) {
+    element.src = path;
+    element.hidden = false;
+    return;
+  }
+  try {
+    element.src = await fetchObjectUrl(path);
+    element.hidden = false;
+  } catch {
+    element.hidden = true;
+  }
+}
+
+function applyRenderRecord(card, record) {
+  if (!card || !record) {
+    return;
+  }
+  const els = renderElements(card);
+  card.dataset.renderId = record.id;
+  const active = record.status === "queued" || record.status === "running";
+
+  els.button.disabled = active;
+  els.progressWrap.hidden = !active;
+  if (active) {
+    const value = Math.max(0, Math.min(100, Number(record.progress) || 0));
+    els.progressBar.value = value;
+    els.stage.textContent = record.stage
+      ? `${value}% · ${record.stage}`
+      : `${value}%`;
+    setStatus(els.status, "Renderizando…");
+  }
+
+  if (record.status === "error") {
+    els.result.hidden = true;
+    const message = record.error
+      ? `${record.error.code}: ${record.error.message}`
+      : "El renderizado falló.";
+    setStatus(els.status, message, "error");
+    return;
+  }
+
+  if (record.status !== "done") {
+    return;
+  }
+
+  els.progressWrap.hidden = true;
+  els.result.hidden = false;
+  els.button.disabled = false;
+  els.button.textContent = "Volver a renderizar";
+  setStatus(els.status, "Render listo.", "success");
+
+  void attachMedia(els.video, record.download_url);
+  void attachMedia(els.thumb, record.thumbnail_url);
+
+  els.download.dataset.path = record.download_url || "";
+  els.download.hidden = !record.download_url;
+  els.thumbDownload.dataset.path = record.thumbnail_url || "";
+  els.thumbDownload.hidden = !record.thumbnail_url;
+  els.deleteBtn.hidden = false;
+}
+
+function stopRenderWatchers() {
+  for (const cleanup of state.renderWatchers) {
+    try {
+      cleanup();
+    } catch {
+      /* ignorado */
+    }
+  }
+  state.renderWatchers = [];
+}
+
+function watchRender(renderId, card) {
+  let source = null;
+  let timer = null;
+  let stopped = false;
+
+  const cleanup = () => {
+    if (stopped) {
+      return;
+    }
+    stopped = true;
+    if (source) {
+      source.close();
+      source = null;
+    }
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+  };
+  state.renderWatchers.push(cleanup);
+
+  const apply = (data) => {
+    if (!data) {
+      return;
+    }
+    applyRenderRecord(card, data);
+    if (data.status === "done" || data.status === "error") {
+      cleanup();
+    }
+  };
+
+  if (
+    flagEnabled("sse_progress") &&
+    !state.apiKey &&
+    typeof EventSource !== "undefined"
+  ) {
+    source = new EventSource(
+      `/api/renders/${encodeURIComponent(renderId)}/events`,
+    );
+    const handleEvent = (event) => {
+      try {
+        apply(JSON.parse(event.data));
+      } catch {
+        /* evento ilegible */
+      }
+    };
+    source.addEventListener("progress", handleEvent);
+    source.addEventListener("done", handleEvent);
+    source.addEventListener("error", (event) => {
+      if (event && typeof event.data === "string") {
+        handleEvent(event);
+        return;
+      }
+      if (source) {
+        source.close();
+        source = null;
+      }
+      if (!stopped) {
+        timer = setTimeout(tick, 500);
+      }
+    });
+    return;
+  }
+
+  const tick = async () => {
+    if (stopped) {
+      return;
+    }
+    try {
+      const record = await api(`/api/renders/${encodeURIComponent(renderId)}`);
+      apply(record);
+      if (!stopped) {
+        timer = setTimeout(tick, 1000);
+      }
+    } catch (error) {
+      cleanup();
+      const els = renderElements(card);
+      els.button.disabled = false;
+      els.progressWrap.hidden = true;
+      setStatus(els.status, describeError(error), "error");
+    }
+  };
+
+  function scheduleRenderPoll() {
+    if (!stopped) {
+      timer = setTimeout(tick, 500);
+    }
+  }
+
+  scheduleRenderPoll();
+}
+
+async function hydrateRenders(analysisId) {
+  if (!analysisId) {
+    return;
+  }
+  try {
+    const data = await api(
+      `/api/renders?job_id=${encodeURIComponent(analysisId)}&limit=100`,
+    );
+    const seen = new Set();
+    for (const record of data.items || []) {
+      if (seen.has(record.clip_id)) {
+        continue;
+      }
+      seen.add(record.clip_id);
+      const card = clipsList.querySelector(
+        `.clip-card[data-clip-id="${record.clip_id}"]`,
+      );
+      if (card) {
+        applyRenderRecord(card, record);
+      }
+    }
+  } catch {
+    /* el historial de renders es opcional */
+  }
 }
 
 function closeDetail() {
   state.activeId = null;
   state.currentJob = null;
   stopWatching();
+  stopRenderWatchers();
   detail.hidden = true;
   markActiveHistory();
 }

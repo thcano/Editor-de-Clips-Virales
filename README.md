@@ -122,8 +122,29 @@ build.bat
 Genera `dist\ViralClip\ViralClip.exe` (modo `onedir`, consola e icono propios). La base se
 guarda en `%LOCALAPPDATA%\ViralClip\viralclip.db` salvo que definas `VIRALCLIP_DB_PATH`.
 
+| Artefacto | Tamaño |
+|---|---|
+| `ViralClip.exe` | 14,58 MB |
+| Carpeta `dist\ViralClip` completa | 251,1 MB (208 archivos) |
+| `ViralClip-0.4.0-win64.zip` | 102 MB |
+
+Distribuye **el ZIP completo**: sin la carpeta `_internal/` la app no arranca.
+
 Consulta la [guía de empaquetado](docs/manual/empaquetado.md) para requisitos, uso,
 antivirus y limitaciones.
+
+## Documentación
+
+| Documento | Para quién |
+|---|---|
+| [Manual de usuario](docs/manual/manual-usuario.md) | Quien usa la app: flujo paso a paso, renderizado, ajustes y solución de problemas |
+| [Manual técnico](docs/manual/manual-tecnico.md) | Desarrollo: arquitectura, módulos, API, configuración, persistencia y diagnóstico |
+| [Manual de despliegue](docs/manual/despliegue.md) | Instalación y distribución: portable, `pip` y servidor local |
+| [Manual de empaquetado](docs/manual/empaquetado.md) | Generación del ejecutable con PyInstaller |
+| [OpenAPI](docs/openapi.yaml) | Contrato de la API (`/docs` en la app) |
+| [Ejemplos de API](docs/api/ejemplos.md) | Peticiones y respuestas de ejemplo |
+| [ADRs](docs/adr/) | Decisiones de arquitectura y su justificación |
+| [Fases](docs/fases/) | Planificación y cierre de cada fase del proyecto |
 
 ## Configuración
 

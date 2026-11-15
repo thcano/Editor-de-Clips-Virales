@@ -1,0 +1,31 @@
+# Artefactos de release: se publican como GitHub Releases, no dentro del repo.
+# GitHub rechaza ficheros > 100 MB en un push.
+dist/*.zip
+dist/*.exe
+
+# Credenciales y entorno local
+.env
+.env.local
+*.local
+
+# Modelos de Whisper y medios pesados generados en runtime
+data/models/
+data/uploads/
+data/renders/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Herramientas
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/

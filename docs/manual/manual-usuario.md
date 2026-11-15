@@ -1,7 +1,8 @@
 # Manual de usuario — Editor de Clips Virales
 
-> Versión documentada: **0.3.0**
+> Versión documentada: **0.4.0**
 > Producto local-first: el análisis y los datos se quedan en tu equipo.
+> Interfaz con estilo **Kinetic Typography**: la tipografía se mueve y es la protagonista.
 
 ---
 
@@ -24,8 +25,39 @@ transcripción para proponer clips candidatos con:
 - no analiza imágenes;
 - no publica en redes sociales.
 
-La salida es un conjunto de metadatos y textos que tú o tu editor usáis para montar el clip
-final.
+La salida es un conjunto de metadatos, textos y **clips renderizados en MP4** que tú o tu
+editor usáis para publicar.
+
+---
+
+## 1 bis. La interfaz
+
+La app usa el estilo **Kinetic Typography**: fondo negro, tipografía display en mayúsculas
+y elementos que se mueven. No es un adorno: la estructura de la pantalla refleja esa idea.
+
+| Zona | Qué verás |
+|---|---|
+| **Fondo** | Negro con una grilla sutil y un resplandor amarillo/naranja que se desplaza lentamente |
+| **Cabecera** | Fija al hacer scroll. Logo en degradado, nombre en mayúsculas y el estado del servicio |
+| **Hero** | "CLIPS QUE **SE MUEVEN**" en tipografía gigante; la palabra en amarillo rota ligeramente; a la derecha, el contorno `// CLIPS // CLIPS` |
+| **Franja amarilla** | "TIPOGRAFÍA CINÉTICA" con un parpadeo lento |
+| **Marquesina** | Banda con el ciclo *Transcribe · Analiza · Ganchos · Subtítulos · Hashtags · Renderiza* desplazándose en bucle infinito |
+| **Paneles** | Numerados: `01` Transcribir · `02` Nuevo análisis · `03` Historial · `04` Resultado |
+| **Botones** | Amarillo sólido. Al pasar el cursor se elevan ligeramente |
+
+**Si prefieres una interfaz sin movimiento**, tu sistema operativo puede desactivar las
+animaciones (Windows: *Configuración → Accesibilidad → Efectos visuales → Animaciones*).
+La app respeta esa preferencia y también la de los navegadores.
+
+### Ejecución portable (sin Python)
+
+Si te han entregado la carpeta `ViralClip/`, no necesitas instalar nada:
+
+1. Descomprime el ZIP completo.
+2. Doble clic en `ViralClip.exe`.
+3. Se abre el navegador con la interfaz.
+
+Detalle en la [guía de despliegue](despliegue.md).
 
 ---
 
@@ -252,6 +284,47 @@ También puedes descargar el **SRT de un clip concreto** desde su tarjeta.
 
 ---
 
+## 8 bis. Renderizar el clip en MP4
+
+Cada tarjeta de clip incluye una sección **Renderizar clip** que convierte el resultado en
+un vídeo vertical listo para publicar.
+
+1. Escribe la **ruta del video de origen** en el campo de texto:
+   ```text
+   C:\videos\entrevista.mp4
+   ```
+2. Pulsa **Renderizar clip**.
+
+Durante el proceso verás una barra de progreso y la etapa actual. Al terminar aparecen:
+
+- un **visor de vídeo** con el clip renderizado;
+- la **miniatura**;
+- botones **Descargar MP4** y **Descargar miniatura**;
+- **Borrar render**, que elimina el archivo del disco.
+
+### Características del render
+
+| Aspecto | Valor por defecto |
+|---|---|
+| Resolución | 1080 × 1920 (vertical 9:16) |
+| Fotogramas por segundo | 30 |
+| Códec de vídeo | H.264 (`libx264`), CRF 20 |
+| Perfil | `veryfast` |
+| Códec de audio | AAC |
+| Subtítulos | Quemados en el vídeo con `libass` |
+| Efecto | Zoom lento (Ken Burns) del 6 % |
+
+El render **requiere FFmpeg** con `libx264` y `libass`. Si falta, la transcripción y el
+análisis siguen funcionando; solo el render falla.
+
+Los archivos se guardan en `%LOCALAPPDATA%\ViralClip\renders` (Windows) o en el directorio
+de datos del usuario.
+
+> El render es la parte más pesada: puede tardar varios minutos según la duración del
+> vídeo y la potencia del equipo. No cierres la app mientras corre.
+
+---
+
 ## 9. Historial
 
 El panel **Historial** lista los análisis guardados en SQLite.
@@ -369,11 +442,26 @@ Usa `viralclip --no-browser` y abre la URL que imprime la consola.
 - Ollama y Whisper se ejecutan en tu equipo; el audio y los textos no salen de tu máquina.
 - La primera transcripción descarga el modelo de Whisper desde Hugging Face; después el
   uso es totalmente local.
+- Las fuentes tipográficas (Syne y JetBrains Mono) están **alojadas en la propia app**: no
+  se hace ninguna petición a Google Fonts ni a ningún CDN. La interfaz se ve igual sin
+  conexión.
 - La base SQLite es local y de un solo usuario.
-- Hay un ejecutable de Windows (`dist\ViralClip\ViralClip.exe`) que no requiere Python;
-  consulta la [guía de empaquetado](empaquetado.md). En macOS/Linux se ejecuta con Python
-  instalado.
+- Existe una **versión portable para Windows** (`dist\ViralClip\ViralClip.exe`, ~251 MB)
+  que no requiere Python instalado; consulta la [guía de empaquetado](empaquetado.md) y la
+  [guía de despliegue](despliegue.md). En macOS/Linux se ejecuta con Python instalado.
 - FFmpeg debe estar instalado en el equipo; no se incluye en el ejecutable.
 - El progreso es por etapas gruesas, no token a token.
 - El juez LLM de calidad es opcional y no determinista.
+
+---
+
+## 14. Documentos relacionados
+
+| Documento | Para quién |
+|---|---|
+| [Manual de usuario](manual-usuario.md) *(este)* | Quien usa la app |
+| [Manual técnico](manual-tecnico.md) | Desarrollo y mantenimiento |
+| [Manual de despliegue](despliegue.md) | Instalación y distribución |
+| [Manual de empaquetado](empaquetado.md) | Generación del ejecutable |
+| [Documentación de la API](../openapi.yaml) | Integraciones |
 - El renderizado y el quemado de subtítulos llegan en la Fase 13.

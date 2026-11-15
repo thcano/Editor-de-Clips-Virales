@@ -1,6 +1,6 @@
 # Empaquetado ejecutable (Windows)
 
-> Versión documentada: **0.3.0**
+> Versión documentada: **0.4.0**
 > Esta guía explica cómo generar `ViralClip.exe` a partir del código fuente y cómo usarlo.
 
 ---
@@ -14,7 +14,7 @@ dist/
 └─ ViralClip/
    ├─ ViralClip.exe
    └─ _internal/
-      ├─ viralclip/web/...   (HTML, CSS, JS, favicon)
+      ├─ viralclip/web/...   (HTML, CSS, JS, favicon, fuentes woff2)
       ├─ python3*.dll
       ├─ ctranslate2/...      (DLLs de Whisper)
       ├─ onnxruntime/...
@@ -25,15 +25,33 @@ dist/
 - Es **portable**: puedes mover la carpeta `ViralClip` completa a otra ruta o equipo.
 - Debes distribuir **toda la carpeta**, no solo el `.exe`.
 
-Tamaño de referencia del build verificado:
+Tamaño de referencia del build verificado (0.4.0, Windows 11 x64, Python 3.14):
 
 | Elemento | Tamaño |
 |---|---|
-| `ViralClip.exe` | ~13,9 MB |
-| Carpeta `dist/ViralClip` completa | ~251 MB (206 archivos) |
+| `ViralClip.exe` | 14,58 MB |
+| Carpeta `dist/ViralClip` completa | **251,1 MB** (208 archivos) |
 
 El tamaño crece frente a la 0.2.0 porque incluye CTranslate2, PyAV, ONNX Runtime, NumPy y
 tokenizers. Los modelos de Whisper **no** están en el bundle.
+
+### Los assets web incluidos
+
+El bundle incluye el frontend completo con el estilo Kinetic Typography:
+
+```text
+_internal/viralclip/web/
+├─ index.html
+├─ styles.css          (~16 KB) con el sistema de diseño kinetic
+├─ app.js              (~49 KB)
+├─ favicon.svg
+└─ fonts/
+   ├─ syne-latin.woff2            (34,6 KB)
+   └─ jetbrains-mono-latin.woff2  (31,4 KB)
+```
+
+Las fuentes están **autoalojadas** a propósito: la CSP del servidor (`default-src 'self'`)
+no permite cargar fuentes desde un CDN, y así la app funciona sin conexión.
 
 ---
 
@@ -201,20 +219,34 @@ Comprobaciones rápidas:
 dist\ViralClip\ViralClip.exe --version
 ```
 
-Debe responder con la versión (por ejemplo `viralclip 0.3.0`).
+Debe responder con la versión (por ejemplo `viralclip 0.4.0`).
 
 Arranque y comprobación HTTP:
 
 ```bat
-dist\ViralClip\ViralClip.exe --no-browser --port 0
+dist\ViralClip\ViralClip.exe --no-browser --port 8766
 ```
 
 Abre la URL impresa y verifica:
 
-- `/` muestra la interfaz con el panel **Transcribir video**;
-- `/static/app.js` responde `200`;
-- `/api/health` responde `200` con `status: ok`;
-- `/api/config` responde `200` e incluye `whisper_models` y `ffmpeg_available`.
+| Comprobación | Resultado esperado |
+|---|---|
+| `/` | Interfaz con el estilo Kinetic Typography (fondo negro, hero, marquesina) |
+| `/static/styles.css` | `200`; el texto contiene `--accent` y `kin-marquee` |
+| `/static/fonts/syne-latin.woff2` | `200` (≈34,6 KB) |
+| `/static/fonts/jetbrains-mono-latin.woff2` | `200` (≈31,4 KB) |
+| `/static/app.js` | `200` |
+| `/api/health` | `200` con `status: ok` (o `degraded` si Ollama no está) |
+| `/api/config` | `200` e incluye `whisper_models` y `ffmpeg_available` |
+
+Verificación de los assets web en disco:
+
+```bat
+dir dist\ViralClip\_internal\viralclip\web
+dir dist\ViralClip\_internal\viralclip\web\fonts
+```
+
+Si `fonts/` no existe, el bundle se compiló antes de añadir las fuentes: rebuild.
 
 Transcripción real desde el ejecutable:
 
