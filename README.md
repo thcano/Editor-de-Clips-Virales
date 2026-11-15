@@ -113,7 +113,16 @@ miniatura en `%LOCALAPPDATA%\ViralClip\renders` (o en `--render-output`).
 
 ## Ejecutable para Windows
 
-El proyecto puede empaquetarse como aplicación sin necesidad de Python instalado:
+### Descarga directa (versión 0.4.0)
+
+**[`ViralClip-0.4.0-win64.zip` (102 MB)](https://github.com/thcano/Editor-de-Clips-Virales/releases/download/v0.4.0/ViralClip-0.4.0-win64.zip)**
+
+Descomprime el ZIP **completo** y ejecuta `ViralClip.exe`. La carpeta `_internal/` es
+necesaria: sin ella la app no arranca. No requiere Python instalado.
+
+Notas de la release: [v0.4.0](https://github.com/thcano/Editor-de-Clips-Virales/releases/tag/v0.4.0).
+
+### Generar el ejecutable desde el código
 
 ```bat
 build.bat
@@ -128,7 +137,8 @@ guarda en `%LOCALAPPDATA%\ViralClip\viralclip.db` salvo que definas `VIRALCLIP_D
 | Carpeta `dist\ViralClip` completa | 251,1 MB (208 archivos) |
 | `ViralClip-0.4.0-win64.zip` | 102 MB |
 
-Distribuye **el ZIP completo**: sin la carpeta `_internal/` la app no arranca.
+> El ZIP se publica como **GitHub Release**, no dentro del repo: GitHub rechaza ficheros
+> de más de 100 MB en un push.
 
 Consulta la [guía de empaquetado](docs/manual/empaquetado.md) para requisitos, uso,
 antivirus y limitaciones.

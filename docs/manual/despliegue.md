@@ -83,6 +83,22 @@ dist/
 2. Publica el `.zip` (GitHub Releases, intranet, drive compartido…).
 3. Distribuye **el ZIP**, nunca el `.exe` suelto: sin `_internal/` la app no arranca.
 
+> **Límite de GitHub:** el repositorio no admite ficheros de más de 100 MB en un push, así
+> que el ZIP se publica como **GitHub Release** y no se versiona en el árbol. La release
+> 0.4.0 está en
+> <https://github.com/thcano/Editor-de-Clips-Virales/releases/tag/v0.4.0> y el artefacto
+> en
+> <https://github.com/thcano/Editor-de-Clips-Virales/releases/download/v0.4.0/ViralClip-0.4.0-win64.zip>.
+
+Con la CLI de GitHub:
+
+```powershell
+gh release create v0.4.0 dist\ViralClip-0.4.0-win64.zip `
+  --repo thcano/Editor-de-Clips-Virales `
+  --title "Editor de Clips Virales 0.4.0 - portable Windows" `
+  --notes-file notas.md
+```
+
 ### 3.4 Instalar en el equipo destino
 
 1. Descomprime el ZIP en una carpeta con espacio para ~300 MB:

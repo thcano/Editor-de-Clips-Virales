@@ -19,7 +19,9 @@ adopta [Semantic Versioning](https://semver.org/lang/es/).
   `dist\ViralClip\ViralClip.exe` (251,1 MB, 208 archivos). No requiere Python instalado.
 - **Documentación completa**: manual de usuario, manual técnico, manual de despliegue y
   manual de empaquetado en [`docs/manual/`](docs/manual/).
-- **ZIP distribuible** `ViralClip-0.4.0-win64.zip` (102 MB) listo para publicar.
+- **ZIP distribuible** `ViralClip-0.4.0-win64.zip` (102 MB), publicado como
+  [GitHub Release v0.4.0](https://github.com/thcano/Editor-de-Clips-Virales/releases/tag/v0.4.0)
+  (GitHub no admite ficheros de más de 100 MB en el árbol del repo).
 
 ### Cambiado
 
