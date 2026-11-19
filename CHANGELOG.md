@@ -7,6 +7,61 @@ adopta [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [0.5.0] — 2026-11-18
+
+### Añadido
+
+- **Aplicación de escritorio nativa**: el ejecutable abre su **propia ventana** de
+  Windows, como cualquier otra aplicación, en lugar de lanzar el navegador del
+  sistema. La ventana usa `pywebview`, que en Windows se apoya en **Edge WebView2**
+  (el motor de Chromium embebido), con fondo negro para evitar el destello blanco
+  al abrir y tamaño inicial de 1280×880 (redimensionable, mínimo 940×620).
+- **Cierre limpio**: al cerrar la ventana se detiene el servidor local y termina
+  la app. Si ya hay otra instancia en ejecución, se muestra un diálogo nativo
+  indicando el puerto ocupado y cómo usar otro.
+- **Log de la aplicación**: como el ejecutable ya no tiene consola, la salida se
+  redirige a `%LOCALAPPDATA%\ViralClip\viralclip.log`.
+- **Diálogos nativos de error** (`MessageBox`) en lugar de mensajes de consola.
+- Nuevo módulo `src/viralclip/desktop_window.py` y tests en
+  `tests/test_desktop_window.py`.
+- Dependencia `pywebview>=6.0`.
+
+### Corregido
+
+- **Crash de arranque del ejecutable sin consola**:
+  `AttributeError: 'NoneType' object has no attribute 'isatty'` →
+  `ValueError: Unable to configure formatter 'default'`.
+  En los builds con `console=False` PyInstaller deja `sys.stdout = None`, y el
+  formateador de logs de Uvicorn (`uvicorn/logging.py`) llama a
+  `sys.stdout.isatty()` sin protección. Se corrige en tres capas:
+  1. `packaging/launcher.py` pasa `os.environ` a `default_data_dir()` (la llamada
+     sin ese argumento lanzaba un `TypeError` oculto por un
+     `except Exception: pass`, que dejaba la redirección al log sin aplicar) y ya
+     no oculta los errores de arranque;
+  2. `desktop_window.ensure_streams()` garantiza que `sys.stdout`/`sys.stderr`
+     nunca sean `None` (se llama al inicio de `cli.main()` y en
+     `_default_server_factory`);
+  3. `cli._uvicorn_log_config()` clona la configuración de logging de Uvicorn con
+     `use_colors=False`, de modo que el formateador nunca consulta `isatty()`.
+- Tests de regresión en `tests/test_no_console_startup.py` que reproducen el
+  entorno `sys.stdout = None` del build empaquetado.
+
+### Cambiado
+
+- La CLI abre la **ventana de escritorio por defecto**. Se añade `--browser` para
+  abrir la interfaz en el navegador del sistema y se mantiene `--no-browser` para
+  arrancar solo el servidor (sin interfaz).
+- El spec de PyInstaller genera un ejecutable **sin consola** (`console=False`).
+  Se puede forzar una build de consola con `set VIRALCLIP_CONSOLE=1` antes de
+  lanzar `build.bat`.
+- `packaging/launcher.py` redirige la salida al log del usuario antes de importar
+  el resto de la aplicación, para que ningún mensaje se pierda.
+- Manuales (usuario, técnico, despliegue, empaquetado) y `README` actualizados a la
+  versión **0.5.0**, con la nueva sección de ventana nativa y el diagnóstico del
+  arranque sin consola.
+
+---
+
 ## [0.4.1] — 2026-11-15
 
 ### Corregido
@@ -122,5 +177,6 @@ adopta [Semantic Versioning](https://semver.org/lang/es/).
 - Estructura inicial del proyecto: arquitectura, contratos JSON y esqueleto de la CLI.
 - Decisiones de arquitectura documentadas en [`docs/adr/`](docs/adr/).
 
+[0.5.0]: https://github.com/thcano/Editor-de-Clips-Virales/releases/tag/v0.5.0
 [0.4.1]: https://github.com/thcano/Editor-de-Clips-Virales/releases/tag/v0.4.1
 [0.4.0]: https://github.com/thcano/Editor-de-Clips-Virales/releases/tag/v0.4.0

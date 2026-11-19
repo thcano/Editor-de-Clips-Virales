@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import socket
 import sys
 import threading
@@ -11,6 +12,7 @@ import webbrowser
 from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
+from typing import Any
 
 import uvicorn
 
@@ -60,7 +62,11 @@ def build_url(host: str, port: int, version: str | None = None) -> str:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="viralclip",
-        description="Arranca el Editor de Clips Virales en local y abre el navegador.",
+        description=(
+            "Arranca el Editor de Clips Virales en local. Por defecto abre una "
+            "ventana de escritorio propia; con --browser usa el navegador del "
+            "sistema."
+        ),
     )
     parser.add_argument(
         "--host",
@@ -79,9 +85,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="Ruta de la base SQLite (por defecto VIRALCLIP_DB_PATH).",
     )
     parser.add_argument(
+        "--browser",
+        action="store_true",
+        help=(
+            "Abre la interfaz en el navegador del sistema en lugar de la "
+            "ventana de escritorio propia."
+        ),
+    )
+    parser.add_argument(
         "--no-browser",
         action="store_true",
-        help="No abre el navegador.",
+        help="No abre ninguna interfaz: solo arranca el servidor local.",
     )
     parser.add_argument(
         "--transcribe",
@@ -154,13 +168,48 @@ def apply_overrides(settings: Settings, args: argparse.Namespace) -> Settings:
     return replace(settings, **changes) if changes else settings
 
 
+def _uvicorn_log_config(log_level: str) -> dict[str, Any]:
+    """Devuelve la configuración de logging de Uvicorn sin colores.
+
+    Uvicorn decide si usar colores llamando a ``sys.stdout.isatty()`` (y a
+    ``sys.stderr.isatty()``) en sus formateadores. En el ejecutable de ventana
+    (PyInstaller con ``console=False``) ``sys.stdout`` es ``None`` y esa llamada
+    revienta con
+    ``AttributeError: 'NoneType' object has no attribute 'isatty'``.
+    Fijar ``use_colors=False`` lo evita en cualquier entorno.
+    """
+
+    config = copy.deepcopy(uvicorn.config.LOGGING_CONFIG)
+    for formatter in config.get("formatters", {}).values():
+        if isinstance(formatter, dict):
+            formatter["use_colors"] = False
+    level = log_level.upper()
+    if level in {"TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}:
+        for name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
+            logger_cfg = config.get("loggers", {}).get(name)
+            if isinstance(logger_cfg, dict):
+                logger_cfg["level"] = level
+    return config
+
+
 def _default_server_factory(
     app: object,
     host: str,
     port: int,
     log_level: str,
 ) -> uvicorn.Server:
-    config = uvicorn.Config(app, host=host, port=port, log_level=log_level.lower())
+    # Blindaje: Uvicorn accede a sys.stdout/sys.stderr al configurar logging.
+    from .desktop_window import ensure_streams
+
+    ensure_streams()
+
+    config = uvicorn.Config(
+        app,
+        host=host,
+        port=port,
+        log_level=log_level.lower(),
+        log_config=_uvicorn_log_config(log_level),
+    )
     return uvicorn.Server(config)
 
 
@@ -171,6 +220,46 @@ def _wait_until_started(server: object, timeout: float) -> bool:
             return True
         time.sleep(0.05)
     return bool(getattr(server, "started", False))
+
+
+def _port_in_use(host: str, port: int) -> bool:
+    """Indica si hay ya alguien escuchando en el puerto indicado."""
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.settimeout(0.5)
+        return sock.connect_ex((host, port)) == 0
+
+
+def _start_server(
+    app: object,
+    host: str,
+    port: int,
+    log_level: str,
+    start_timeout: float,
+    server_factory: ServerFactory,
+) -> tuple[Any, threading.Thread]:
+    """Arranca el servidor Uvicorn en un hilo daemon y espera a que esté listo."""
+
+    server = server_factory(app, host, port, log_level)
+    thread = threading.Thread(
+        target=server.run,
+        name="viralclip-server",
+        daemon=True,
+    )
+    thread.start()
+
+    if not _wait_until_started(server, start_timeout):
+        server.should_exit = True
+        thread.join(timeout=5)
+        raise RuntimeError("El servidor no arrancó a tiempo.")
+    return server, thread
+
+
+def _stop_server(server: Any, thread: threading.Thread) -> None:
+    """Pide al servidor que pare y espera a que termine el hilo."""
+
+    server.should_exit = True
+    thread.join(timeout=10)
 
 
 def serve(
@@ -186,18 +275,9 @@ def serve(
 ) -> None:
     """Arranca el servidor en un hilo, abre el navegador y espera el cierre."""
 
-    server = server_factory(app, host, port, log_level)
-    thread = threading.Thread(
-        target=server.run,
-        name="viralclip-server",
-        daemon=True,
+    server, thread = _start_server(
+        app, host, port, log_level, start_timeout, server_factory
     )
-    thread.start()
-
-    if not _wait_until_started(server, start_timeout):
-        server.should_exit = True
-        thread.join(timeout=5)
-        raise RuntimeError("El servidor no arrancó a tiempo.")
 
     url = build_url(host, port)
     asset_version = AssetVersion().get()
@@ -216,8 +296,44 @@ def serve(
     except KeyboardInterrupt:
         print("\nDeteniendo...", flush=True)
     finally:
-        server.should_exit = True
-        thread.join(timeout=10)
+        _stop_server(server, thread)
+
+
+def serve_window(
+    app: object,
+    host: str,
+    port: int,
+    *,
+    log_level: str = "INFO",
+    start_timeout: float = DEFAULT_START_TIMEOUT,
+    server_factory: ServerFactory = _default_server_factory,
+    window_runner: Callable[..., int] | None = None,
+) -> int:
+    """Arranca el servidor y muestra la interfaz en una ventana de escritorio.
+
+    Es el modo por defecto del ejecutable: la app se abre como cualquier otra
+    aplicación de Windows, con su propia ventana, sin abrir el navegador.
+    """
+
+    from .desktop_window import run_desktop_window
+
+    runner = window_runner or run_desktop_window
+
+    server, thread = _start_server(
+        app, host, port, log_level, start_timeout, server_factory
+    )
+
+    url = build_url(host, port)
+    asset_version = AssetVersion().get()
+    window_url = build_url(host, port, asset_version)
+    print(f"Editor de Clips Virales {__version__}", flush=True)
+    print(f"Interfaz local: {url}", flush=True)
+    print(f"API docs: {url}/docs", flush=True)
+
+    try:
+        return runner(window_url, on_closed=lambda: _stop_server(server, thread))
+    finally:
+        _stop_server(server, thread)
 
 
 def transcribe_command(args: argparse.Namespace, settings: Settings) -> int:
@@ -327,6 +443,12 @@ def render_command(args: argparse.Namespace, settings: Settings) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    # En el ejecutable de ventana no hay consola: sys.stdout/sys.stderr pueden
+    # ser None y romper el formateador de logs de Uvicorn.
+    from .desktop_window import ensure_streams
+
+    ensure_streams()
+
     args = build_parser().parse_args(argv)
     settings = apply_overrides(Settings.from_env(), args)
     if args.transcribe:
@@ -336,20 +458,63 @@ def main(argv: list[str] | None = None) -> int:
 
     port = resolve_port(settings.host, settings.port)
     app = create_app(settings=settings)
+
+    if args.no_browser:
+        try:
+            serve(
+                app,
+                settings.host,
+                port,
+                log_level=settings.log_level,
+                open_browser=False,
+            )
+        except RuntimeError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return 1
+        except KeyboardInterrupt:
+            print("\nDetenido.")
+        return 0
+
+    if args.browser:
+        try:
+            serve(
+                app,
+                settings.host,
+                port,
+                log_level=settings.log_level,
+                open_browser=True,
+            )
+        except RuntimeError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return 1
+        except KeyboardInterrupt:
+            print("\nDetenido.")
+        return 0
+
     try:
-        serve(
+        return serve_window(
             app,
             settings.host,
             port,
             log_level=settings.log_level,
-            open_browser=not args.no_browser,
         )
     except RuntimeError as exc:
-        print(f"Error: {exc}", file=sys.stderr)
+        from .desktop_window import show_error
+
+        if settings.port > 0 and _port_in_use(settings.host, settings.port):
+            show_error(
+                "Editor de Clips Virales",
+                "Ya hay otra instancia en ejecución.\n\n"
+                f"El puerto {settings.port} ya está ocupado. Cierra la otra "
+                "ventana o arranca con otro puerto:\n\n"
+                f"    viralclip --port 8765",
+            )
+        else:
+            show_error("Editor de Clips Virales", f"Error: {exc}")
         return 1
     except KeyboardInterrupt:
         print("\nDetenido.")
-    return 0
+        return 0
 
 
 if __name__ == "__main__":

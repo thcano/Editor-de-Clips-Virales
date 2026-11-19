@@ -1,6 +1,6 @@
 # Manual de despliegue — Editor de Clips Virales
 
-> Versión documentada: **0.4.1**
+> Versión documentada: **0.5.0**
 > Audiencia: personas encargadas de instalar, distribuir y dar soporte al producto.
 > Cubre los tres escenarios de despliegue: **portable**, **instalación en el equipo** y
 > **servidor local compartido**.
@@ -69,33 +69,33 @@ Detalle completo del proceso en [`empaquetado.md`](empaquetado.md).
 dist/
 └─ ViralClip/
    ├─ ViralClip.exe          ~14,6 MB
-   └─ _internal/             ~236 MB (DLLs, módulos, assets web)
+   └─ _internal/             ~240 MB (DLLs, módulos, assets web, WebView2)
 ```
 
-**208 archivos · 251,1 MB en total.**
+**232 archivos · 254,3 MB en total.**
 
 ### 3.3 Distribuir
 
 1. Comprime la **carpeta completa** `ViralClip/`:
    ```powershell
-   Compress-Archive -Path dist\ViralClip -DestinationPath ViralClip-0.4.1-win64.zip
+   Compress-Archive -Path dist\ViralClip -DestinationPath ViralClip-0.5.0-win64.zip
    ```
 2. Publica el `.zip` (GitHub Releases, intranet, drive compartido…).
 3. Distribuye **el ZIP**, nunca el `.exe` suelto: sin `_internal/` la app no arranca.
 
 > **Límite de GitHub:** el repositorio no admite ficheros de más de 100 MB en un push, así
 > que el ZIP se publica como **GitHub Release** y no se versiona en el árbol. La release
-> 0.4.1 está en
-> <https://github.com/thcano/Editor-de-Clips-Virales/releases/tag/v0.4.1> y el artefacto
+> 0.5.0 está en
+> <https://github.com/thcano/Editor-de-Clips-Virales/releases/tag/v0.5.0> y el artefacto
 > en
-> <https://github.com/thcano/Editor-de-Clips-Virales/releases/download/v0.4.1/ViralClip-0.4.1-win64.zip>.
+> <https://github.com/thcano/Editor-de-Clips-Virales/releases/download/v0.5.0/ViralClip-0.5.0-win64.zip>.
 
 Con la CLI de GitHub:
 
 ```powershell
-gh release create v0.4.1 dist\ViralClip-0.4.1-win64.zip `
+gh release create v0.5.0 dist\ViralClip-0.5.0-win64.zip `
   --repo thcano/Editor-de-Clips-Virales `
-  --title "Editor de Clips Virales 0.4.1 - portable Windows" `
+  --title "Editor de Clips Virales 0.5.0 - portable Windows" `
   --notes-file notas.md
 ```
 
@@ -117,26 +117,39 @@ gh release create v0.4.1 dist\ViralClip-0.4.1-win64.zip `
    %LOCALAPPDATA%\ViralClip\
 2. Se crea la base SQLite: %LOCALAPPDATA%\ViralClip\viralclip.db
 3. Arranca la API en http://127.0.0.1:8000 (o el primer puerto libre)
-4. Abre el navegador en la interfaz
-5. En la consola se ven la URL y los logs
+4. Abre la VENTANA NATIVA de la app (no el navegador)
+5. Los logs se escriben en %LOCALAPPDATA%\ViralClip\viralclip.log
 ```
+
+La ventana usa **Edge WebView2**, que viene instalado de serie en Windows 11 y en
+las actualizaciones recientes de Windows 10. Si no estuviera, Windows ofrece
+instalarlo la primera vez.
+
+Al cerrar la ventana, el servidor se detiene y no queda ningún proceso en
+segundo plano.
 
 La primera **transcripción** descarga el modelo de Whisper (`small`, ~500 MB) al
 directorio de modelos. Requiere conexión en ese momento; después funciona offline.
 
 ### 3.6 Atajos y acceso directo
 
-Para crear un acceso directo con puerto fijo:
+El acceso directo puede apuntar directamente al ejecutable:
 
 ```bat
-"C:\Apps\ViralClip\ViralClip.exe" --port 8000 --no-browser
+"C:\Apps\ViralClip\ViralClip.exe"
+```
+
+Para fijar el puerto:
+
+```bat
+"C:\Apps\ViralClip\ViralClip.exe" --port 8000
 ```
 
 El directorio de trabajo del acceso directo determina dónde se busca el `.env`.
 
 ### 3.7 Desinstalar
 
-1. Cerrar la app (la consola, `Ctrl+C`).
+1. Cerrar la ventana de la app.
 2. Borrar la carpeta de la aplicación.
 3. Opcional: borrar los datos del usuario:
    ```text
@@ -147,11 +160,12 @@ El directorio de trabajo del acceso directo determina dónde se busca el `.env`.
 
 ```powershell
 cd C:\Apps\ViralClip
-.\ViralClip.exe --version        # → viralclip 0.4.1
+.\ViralClip.exe --version        # → viralclip 0.5.0
 .\ViralClip.exe --no-browser --port 8766
 ```
 
-Comprueba en el navegador:
+Comprueba en el navegador (la app también sirve la interfaz por HTTP, aunque lo
+normal es usarla desde su propia ventana):
 
 | URL | Respuesta esperada |
 |---|---|
@@ -160,6 +174,10 @@ Comprueba en el navegador:
 | `/static/fonts/syne-latin.woff2` | `200` (≈34 KB) |
 | `/api/health` | `200` con `"status": "ok"` o `"degraded"` |
 | `/api/config` | `200` con `whisper_models` y `ffmpeg_available` |
+
+Además, al abrir el ejecutable debe aparecer **una ventana con el icono y el
+título "Editor de Clips Virales"**, y **no** debe abrirse ninguna pestaña del
+navegador.
 
 ---
 
@@ -178,9 +196,10 @@ copy .env.example .env
 Ejecución:
 
 ```powershell
-viralclip                    # arranca la API y abre el navegador
+viralclip                    # arranca la API y abre la ventana de escritorio
 viralclip --port 8765
-viralclip --no-browser
+viralclip --browser          # abre la interfaz en el navegador del sistema
+viralclip --no-browser       # solo el servidor, sin interfaz
 viralclip --version
 ```
 
@@ -307,7 +326,7 @@ Para restaurar, basta con volver a copiar el directorio.
 
 Checklist:
 
-- [ ] `ViralClip.exe --version` responde `viralclip 0.4.1`
+- [ ] `ViralClip.exe --version` responde `viralclip 0.5.0`
 - [ ] El navegador muestra la interfaz con el estilo Kinetic Typography
 - [ ] El título de la pestaña es "Editor de Clips Virales"
 - [ ] `/api/health` responde `200`
@@ -340,7 +359,7 @@ Checklist:
 ## 10. Actualizar una instalación
 
 1. Descargar la nueva versión del bundle.
-2. Detener la app en ejecución (`Ctrl+C` en la consola).
+2. Cerrar la ventana de la app en ejecución (o detener el proceso `ViralClip.exe`).
 3. Sustituir la carpeta completa por la nueva.
 4. **Conservar** `%LOCALAPPDATA%\ViralClip\` (no se toca: es donde están los datos).
 5. Ejecutar `ViralClip.exe --version` y arrancar.
@@ -373,6 +392,8 @@ Después:
 - [ ] La interfaz carga con el estilo Kinetic Typography
 - [ ] Las fuentes se sirven (200) desde `/static/fonts/`
 - [ ] `/api/health` y `/api/config` responden 200
+- [ ] Al abrir el `.exe` aparece **la ventana de escritorio** (no el navegador)
+- [ ] No queda ningún proceso `ViralClip.exe` tras cerrar la ventana
 - [ ] Una transcripción y un render de prueba funcionan
 - [ ] El ZIP se genera y se publica en la release de GitHub
 - [ ] Los manuales (usuario, técnico, despliegue, empaquetado) están actualizados

@@ -7,12 +7,15 @@ identificar los momentos con mayor potencial viral y generar clips de formato ve
 - **subtítulos dinámicos** de 4–5 palabras por línea con palabras clave resaltadas,
 - **título, descripción y hashtags** adaptados a TikTok/Reels o YouTube Shorts.
 
-> Esta versión (0.4.1) transcribe, analiza y **renderiza** el clip final en MP4 vertical
+> Esta versión (0.5.0) transcribe, analiza y **renderiza** el clip final en MP4 vertical
 > 1080×1920 con fondo desenfocado, zoom suave y subtítulos quemados. Todo se ejecuta en
 > local con el FFmpeg del sistema.
 >
 > La interfaz usa **exclusivamente** el estilo **Kinetic Typography**: fondo negro,
 > tipografía display Syne mayúscula, texto en JetBrains Mono y acento amarillo.
+>
+> El ejecutable de Windows es una **aplicación de escritorio nativa**: abre su propia
+> ventana (Edge WebView2 embebido), **sin lanzar el navegador**.
 
 ## Estado del proyecto
 
@@ -35,7 +38,7 @@ identificar los momentos con mayor potencial viral y generar clips de formato ve
 
 La documentación de cada fase (planeación + cierre) vive en [`docs/fases/`](docs/fases/).
 
-Versión actual: **0.4.1** (ver [CHANGELOG](CHANGELOG.md)).
+Versión actual: **0.5.0** (ver [CHANGELOG](CHANGELOG.md)).
 
 ## Stack
 
@@ -116,19 +119,25 @@ miniatura en `%LOCALAPPDATA%\ViralClip\renders` (o en `--render-output`).
 
 ## Ejecutable para Windows
 
-### Descarga directa (versión 0.4.1)
+### Descarga directa (versión 0.5.0)
 
-**[`ViralClip-0.4.1-win64.zip` (102 MB)](https://github.com/thcano/Editor-de-Clips-Virales/releases/download/v0.4.1/ViralClip-0.4.1-win64.zip)**
+**[`ViralClip-0.5.0-win64.zip` (102 MB)](https://github.com/thcano/Editor-de-Clips-Virales/releases/download/v0.5.0/ViralClip-0.5.0-win64.zip)**
 
 Descomprime el ZIP **completo** y ejecuta `ViralClip.exe`. La carpeta `_internal/` es
 necesaria: sin ella la app no arranca. No requiere Python instalado.
 
-Notas de la release: [v0.4.1](https://github.com/thcano/Editor-de-Clips-Virales/releases/tag/v0.4.1).
+Notas de la release: [v0.5.0](https://github.com/thcano/Editor-de-Clips-Virales/releases/tag/v0.5.0).
 
-> **¿Sigues viendo el diseño anterior?** La 0.4.1 corrige la caché del navegador que
-> mantenía el estilo previo en pantalla. Arranca la app desde el ejecutable nuevo: el
-> lanzador abre una URL versionada y el navegador purga la caché obsoleta. Si aún
-> persiste, pulsa `Ctrl+F5`. Detalle en el
+> **Aplicación de escritorio, no un sitio web.** Desde la 0.5.0 el ejecutable abre
+> **su propia ventana** de Windows (con icono y barra de título) y **no abre el
+> navegador**. La ventana usa Edge WebView2, que ya viene instalado en Windows 11 y
+> en las actualizaciones recientes de Windows 10. Al cerrarla se detiene todo: no
+> queda ningún proceso en segundo plano.
+
+> **¿Sigues viendo el diseño anterior?** La 0.4.1 corrigió la caché del navegador que
+> mantenía el estilo previo en pantalla; la 0.5.0 lo resuelve de raíz con la URL
+> versionada y las cabeceras `Clear-Site-Data`. Si aún persiste, pulsa `Ctrl+F5`.
+> Detalle en el
 > [manual de usuario](docs/manual/manual-usuario.md#la-interfaz-se-ve-con-el-diseño-anterior).
 
 ### Generar el ejecutable desde el código
@@ -137,14 +146,22 @@ Notas de la release: [v0.4.1](https://github.com/thcano/Editor-de-Clips-Virales/
 build.bat
 ```
 
-Genera `dist\ViralClip\ViralClip.exe` (modo `onedir`, consola e icono propios). La base se
-guarda en `%LOCALAPPDATA%\ViralClip\viralclip.db` salvo que definas `VIRALCLIP_DB_PATH`.
+Genera `dist\ViralClip\ViralClip.exe` (modo `onedir`, ventana propia e icono). La base
+se guarda en `%LOCALAPPDATA%\ViralClip\viralclip.db` salvo que definas `VIRALCLIP_DB_PATH`.
+
+Para depurar, genera una build **con consola** (el launcher redirige la salida al log
+del usuario en el build normal):
+
+```bat
+set VIRALCLIP_CONSOLE=1
+build.bat
+```
 
 | Artefacto | Tamaño |
 |---|---|
-| `ViralClip.exe` | 14,58 MB |
-| Carpeta `dist\ViralClip` completa | 251,1 MB (208 archivos) |
-| `ViralClip-0.4.1-win64.zip` | 102 MB |
+| `ViralClip.exe` | 14,63 MB |
+| Carpeta `dist\ViralClip` completa | 254,3 MB (232 archivos) |
+| `ViralClip-0.5.0-win64.zip` | 102 MB |
 
 > El ZIP se publica como **GitHub Release**, no dentro del repo: GitHub rechaza ficheros
 > de más de 100 MB en un push.

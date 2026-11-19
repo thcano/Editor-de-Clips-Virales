@@ -177,6 +177,80 @@ def test_main_returns_error_when_server_fails(monkeypatch, tmp_path) -> None:
     assert cli.main(["--no-browser", "--port", "0"]) == 1
 
 
+def test_main_uses_desktop_window_by_default(monkeypatch, tmp_path) -> None:
+    """Por defecto la app se abre en su propia ventana, no en el navegador."""
+
+    calls: list[dict] = []
+
+    def fake_serve_window(app, host, port, **kwargs) -> int:
+        calls.append({"host": host, "port": port, **kwargs})
+        return 0
+
+    settings = Settings(db_path=tmp_path / "base.db", llm_enabled=False)
+    monkeypatch.setattr(
+        cli.Settings, "from_env", classmethod(lambda cls: settings)
+    )
+    monkeypatch.setattr(cli, "create_app", lambda settings=None: object())
+    monkeypatch.setattr(cli, "serve_window", fake_serve_window)
+    monkeypatch.setattr(
+        cli, "serve", lambda *a, **k: pytest.fail("no debe usarse el navegador")
+    )
+
+    code = cli.main(["--host", "127.0.0.1", "--port", "0"])
+
+    assert code == 0
+    assert len(calls) == 1
+    assert calls[0]["host"] == "127.0.0.1"
+    assert 0 < calls[0]["port"] <= 65535
+
+
+def test_main_browser_flag_uses_serve(monkeypatch, tmp_path) -> None:
+    calls: list[dict] = []
+
+    def fake_serve(app, host, port, **kwargs) -> None:
+        calls.append({"host": host, "port": port, **kwargs})
+
+    settings = Settings(db_path=tmp_path / "base.db", llm_enabled=False)
+    monkeypatch.setattr(
+        cli.Settings, "from_env", classmethod(lambda cls: settings)
+    )
+    monkeypatch.setattr(cli, "create_app", lambda settings=None: object())
+    monkeypatch.setattr(cli, "serve", fake_serve)
+    monkeypatch.setattr(
+        cli, "serve_window", lambda *a, **k: pytest.fail("no debe abrirse la ventana")
+    )
+
+    code = cli.main(["--browser", "--port", "0"])
+
+    assert code == 0
+    assert len(calls) == 1
+    assert calls[0]["open_browser"] is True
+
+
+def test_serve_window_opens_versioned_url_and_stops_server(monkeypatch) -> None:
+    opened: list[dict] = []
+
+    def fake_factory(app, host, port, log_level):
+        return FakeServer()
+
+    def fake_runner(url, **kwargs):
+        opened.append({"url": url, **kwargs})
+        kwargs["on_closed"]()
+        return 0
+
+    cli.serve_window(
+        object(),
+        "127.0.0.1",
+        8123,
+        server_factory=fake_factory,
+        window_runner=fake_runner,
+    )
+
+    assert len(opened) == 1
+    assert opened[0]["url"].startswith("http://127.0.0.1:8123?v=")
+    assert callable(opened[0]["on_closed"])
+
+
 class FakeTranscriber:
     def __init__(self, transcript, *, error: Exception | None = None) -> None:
         self.transcript = transcript

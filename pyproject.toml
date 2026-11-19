@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "viralclip"
-version = "0.4.1"
+version = "0.5.0"
 description = "Editor de Clips Virales: analiza transcripciones y genera clips con ganchos, subtítulos y hashtags."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -17,6 +17,8 @@ dependencies = [
   "python-multipart>=0.0.9",
   "faster-whisper>=1.2",
   "numpy>=1.26",
+  # Ventana de escritorio nativa; en Windows usa el runtime Edge WebView2.
+  "pywebview>=6.0",
 ]
 
 [project.optional-dependencies]

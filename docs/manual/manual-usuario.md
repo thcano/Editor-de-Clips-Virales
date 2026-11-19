@@ -1,6 +1,6 @@
 # Manual de usuario — Editor de Clips Virales
 
-> Versión documentada: **0.4.1**
+> Versión documentada: **0.5.0**
 > Producto local-first: el análisis y los datos se quedan en tu equipo.
 > Interfaz con estilo **Kinetic Typography**: la tipografía se mueve y es la protagonista.
 
@@ -55,7 +55,8 @@ Si te han entregado la carpeta `ViralClip/`, no necesitas instalar nada:
 
 1. Descomprime el ZIP completo.
 2. Doble clic en `ViralClip.exe`.
-3. Se abre el navegador con la interfaz.
+3. Se abre **la ventana de la aplicación**, con su icono y su barra de título.
+   **No se abre el navegador.**
 
 Detalle en la [guía de despliegue](despliegue.md).
 
@@ -118,49 +119,75 @@ El archivo `.env` es opcional: la app funciona con los valores por defecto.
 
 ## 4. Arrancar la aplicación
 
-### Opción A — Lanzador de escritorio (recomendado)
+### Opción A — Aplicación de escritorio (recomendado)
+
+Si usas el **ejecutable portable**, no tienes que hacer nada más:
+
+1. Descomprime el ZIP completo.
+2. Doble clic en `ViralClip.exe`.
+3. Se abre **una ventana propia de la app**, con su icono y su barra de título.
+   **No se abre el navegador.**
+
+La ventana es redimensionable (mínimo 940×620) y al cerrarla se detiene todo:
+no queda ningún proceso en segundo plano.
+
+> La ventana usa **Edge WebView2**, el motor de Chromium que Windows 11 y las
+> actualizaciones recientes de Windows 10 ya traen instalado. Si tu equipo no lo
+> tiene, Windows te ofrece instalarlo automaticamente la primera vez.
+
+### Opción B — Desde el código
 
 ```bash
 viralclip
 ```
 
-Si instalaste el paquete con `pip install -e .`, el comando anterior funciona directamente.
-Si no, usa el lanzador del proyecto:
-
-```bat
-:: Windows
-run.bat
-```
-
-```bash
-# macOS / Linux
-./run.sh
-```
+Si instalaste el paquete con `pip install -e .`, el comando anterior funciona
+directamente. Igual que el ejecutable, abre su propia ventana de escritorio.
 
 El lanzador:
 
-1. arranca la API local,
+1. arranca la API local en `127.0.0.1`,
 2. elige un puerto libre si usas `--port 0`,
-3. abre el navegador,
-4. se detiene con `Ctrl+C`.
+3. abre la **ventana de escritorio**,
+4. termina al cerrar la ventana.
 
 Opciones útiles:
 
 ```bash
 viralclip --port 0          # puerto libre automático
-viralclip --no-browser      # no abre el navegador
+viralclip --browser         # abre la interfaz en el navegador del sistema
+viralclip --no-browser      # solo arranca el servidor, sin interfaz
 viralclip --db data/otra.db # otra base SQLite
 viralclip --host 0.0.0.0    # escuchar en la red local (úsalo con cuidado)
 viralclip --version
 ```
 
-### Opción B — Servidor manual
+### Opción C — Servidor manual
 
 ```bash
 uvicorn viralclip.api.app:create_app --factory --reload
 ```
 
 Abre `http://127.0.0.1:8000` para la interfaz y `http://127.0.0.1:8000/docs` para Swagger.
+
+### Si la app ya está abierta
+
+Al abrirla por segunda vez con el mismo puerto, aparece un diálogo indicando que
+ya hay otra instancia en ejecución. Ciérrala o arranca con otro puerto:
+
+```bash
+viralclip --port 8765
+```
+
+### Log de la aplicación
+
+El ejecutable no tiene consola, así que los mensajes se guardan en:
+
+```text
+%LOCALAPPDATA%\ViralClip\viralclip.log
+```
+
+Ábrelo si algo falla y necesitas ver el detalle.
 
 ---
 
@@ -375,8 +402,7 @@ Si tras actualizar la app sigues viendo el diseño previo (fondo claro, tipograf
 del sistema) en lugar del estilo **Kinetic Typography**, el navegador tiene una
 copia antigua de `styles.css` guardada.
 
-**Solución:** abre la interfaz desde el enlace que imprime la consola al
-arrancar. La app abre el navegador en una URL versionada
+**Solución:** la app sirve la interfaz en una URL versionada
 (`http://127.0.0.1:8000/?v=...`) y además pide al navegador que vacíe su caché
 la primera vez, de modo que el diseño antiguo desaparece por completo.
 
@@ -456,7 +482,22 @@ así que pueden existir archivos `viralclip.db-wal` y `viralclip.db-shm` junto a
 
 ### El navegador no se abre
 
-Usa `viralclip --no-browser` y abre la URL que imprime la consola.
+Desde la **versión 0.5.0** el navegador **no se abre nunca por defecto**: la app
+muestra su propia ventana de escritorio. Si lo que quieres es usar el navegador a
+propósito (por ejemplo para depurar), arranca con:
+
+```bash
+viralclip --browser
+```
+
+Y si solo quieres el servidor sin ninguna interfaz:
+
+```bash
+viralclip --no-browser
+```
+
+En ese caso la URL se imprime en la consola (o, en el ejecutable, se guarda en
+`%LOCALAPPDATA%\ViralClip\viralclip.log`).
 
 ---
 

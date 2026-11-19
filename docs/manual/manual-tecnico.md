@@ -1,6 +1,6 @@
 # Manual técnico — Editor de Clips Virales
 
-> Versión documentada: **0.4.1**
+> Versión documentada: **0.5.0**
 > Audiencia: equipo de desarrollo, revisores de código y mantenedores del proyecto.
 > Documento de referencia para comprendre, modificar, construir y dar soporte al sistema.
 
@@ -44,7 +44,7 @@ ocurre en el equipo del usuario; no hay telemetría ni nube por defecto.
 | [ADR-005](../adr/ADR-005-sse-progreso.md) | SSE para el progreso con fallback de polling |
 | [ADR-006](../adr/ADR-006-contrato-salida.md) | Contrato JSON de salida versionado |
 | [ADR-007](../adr/ADR-007-local-first.md) | Local-first: sin telemetría |
-| [ADR-008](../adr/ADR-008-lanzador-escritorio.md) | Lanzador de escritorio que abre el navegador |
+| [ADR-008](../adr/ADR-008-lanzador-escritorio.md) | Lanzador de escritorio (ventana nativa propia desde 0.5.0) |
 | [ADR-009](../adr/ADR-009-transcripcion-local-whisper.md) | Transcripción local con faster-whisper |
 | [ADR-010](../adr/ADR-010-renderizado-ffmpeg.md) | Renderizado con FFmpeg (`libx264` + `libass`) |
 
@@ -60,6 +60,7 @@ Editor de Clips Virales/
 │  ├─ config.py                Settings desde variables de entorno
 │  ├─ assets.py                Versionado y caché de los assets del frontend
 │  ├─ desktop.py               Rutas de datos por usuario (paquete congelado)
+│  ├─ desktop_window.py        Ventana de escritorio nativa (pywebview/WebView2)
 │  ├─ analyzer.py              Núcleo de análisis: ganchos, score, razón
 │  ├─ platform.py              Adaptadores por red social (TikTok/Reels/Shorts)
 │  ├─ lexicon.py               Léxico de phrases y palabras clave
@@ -253,10 +254,10 @@ La solución completa añade tres capas (`src/viralclip/assets.py`):
    contenido de `styles.css`, `app.js`, `favicon.svg` y las fuentes. Ese valor se
    añade a las URLs (`?v=c174d578e6`), de modo que cualquier cambio produce una
    URL **nueva** que el navegador no puede reutilizar.
-2. **URL de entrada versionada.** El lanzador (`cli.py::serve`) abre el navegador
-   en `http://127.0.0.1:8000/?v=<hash>`. Es imprescindible: si la propia página
-   de entrada está cacheada, el navegador no pide nada y nunca ve las URLs
-   versionadas.
+2. **URL de entrada versionada.** El lanzador (`cli.py::serve_window`) abre la
+   ventana de escritorio en `http://127.0.0.1:8000/?v=<hash>`. Es imprescindible:
+   si la propia página de entrada está cacheada, el navegador no pide nada y nunca
+   ve las URLs versionadas.
 3. **Purga de la caché obsoleta.** La respuesta de `/` envía `Clear-Site-Data:
    "cache"` cuando la versión ha cambiado, controlado con la cookie
    `viralclip_assets`. Así desaparece cualquier copia del diseño anterior y la
@@ -425,7 +426,8 @@ Esquemas de contrato en [`docs/contratos/`](../contratos/).
 Ver el detalle en [`empaquetado.md`](empaquetado.md). Resumen:
 
 - PyInstaller en modo **`onedir`** con el spec `packaging/viralclip.spec`.
-- `packaging/launcher.py` es el entry point: reconfigura stdout/stderr a UTF-8 y llama a
+- `packaging/launcher.py` es el entry point: garantiza que `sys.stdout`/`sys.stderr`
+  no sean `None`, redirige la salida al log del usuario y llama a
   `desktop.prepare_environment()` antes de delegar en `viralclip.cli`.
 - `packaging/make_icon.py` genera `packaging/viralclip.ico` con Pillow.
 - `build.bat` (Windows) y `build.sh` (macOS/Linux) orquestan: dependencias → icono →
@@ -438,6 +440,85 @@ build.bat
 
 El ejecutable **no escribe dentro de su carpeta**: los datos van a
 `%LOCALAPPDATA%\ViralClip\`.
+
+---
+
+## 9-bis. Ventana de escritorio nativa
+
+Desde la **0.5.0** el ejecutable es una aplicación de escritorio de verdad: abre
+**su propia ventana** y no lanza el navegador del sistema.
+
+### Arquitectura
+
+```text
+ViralClip.exe (console=False)
+   └─ packaging/launcher.py
+        ├─ ensure_streams()          sys.stdout/stderr nunca son None
+        ├─ redirect_output_to_log()  → %LOCALAPPDATA%\ViralClip\viralclip.log
+        └─ viralclip.cli.main()
+             └─ cli.serve_window()
+                  ├─ _start_server()  Uvicorn en hilo daemon
+                  ├─ desktop_window.run_desktop_window(url)
+                  │    └─ pywebview  → Edge WebView2 (Chromium embebido)
+                  └─ _stop_server()  al cerrar la ventana
+```
+
+### Módulo `src/viralclip/desktop_window.py`
+
+| Símbolo | Función |
+|---|---|
+| `run_desktop_window(url, ...)` | Crea la ventana, espera a que se cierre y devuelve el código de salida |
+| `redirect_output_to_log(path)` | Envía stdout/stderr al log del usuario (tee a consola si existe) |
+| `ensure_streams()` | Sustituye `None` por un flujo descartable (`_NullStream`) |
+| `show_error(title, message)` | Diálogo nativo de error (`MessageBoxW`) en Windows |
+
+La ventana usa **WebView2** (Edge Chromium embebido), que viene instalado de serie en
+Windows 11 y en las actualizaciones recientes de Windows 10. Por eso los procesos
+`msedgewebview2.exe` que aparecen son **hijos del EXE** (el motor embebido), no un
+navegador abierto.
+
+### Modos de arranque
+
+| Comando | Comportamiento |
+|---|---|
+| `viralclip` / `ViralClip.exe` | **Ventana de escritorio** (por defecto) |
+| `viralclip --browser` | Interfaz en el navegador del sistema |
+| `viralclip --no-browser` | Solo el servidor local, sin interfaz |
+
+### Arranque sin consola: por qué fallaba
+
+El build de PyInstaller usa `console=False`, así que el intérprete deja
+`sys.stdout = None` y `sys.stderr = None`. Uvicorn, al construir su `Config`,
+configura el logging y sus formateadores llaman a `sys.stdout.isatty()`:
+
+```python
+# uvicorn/logging.py (v0.54.0)
+self.use_colors = sys.stdout.isatty()   # ← AttributeError si stdout es None
+```
+
+El error que veía el usuario era:
+
+```text
+AttributeError: 'NoneType' object has no attribute 'isatty'
+ValueError: Unable to configure formatter 'default'
+```
+
+La causa inmediata era que `packaging/launcher.py` llamaba a
+`default_data_dir()` sin su argumento obligatorio `environ`, lanzando un `TypeError`
+que un `except Exception: pass` ocultaba; la redirección al log no se aplicaba y
+`sys.stdout` seguía a `None`.
+
+La corrección aplica **tres capas**:
+
+1. **Causa raíz** — `launcher.py` pasa `os.environ` y ya no oculta los errores.
+2. **Garantía** — `ensure_streams()` instala un `_NullStream` cuando no hay consola,
+   de modo que `sys.stdout.isatty()` nunca falla (llamado al inicio de `cli.main()`
+   y en `_default_server_factory`).
+3. **Defensa en profundidad** — `cli._uvicorn_log_config()` clona la configuración de
+   logging de Uvicorn con `use_colors=False`, así que el formateador nunca consulta
+   `isatty()`.
+
+Los tests de regresión viven en `tests/test_no_console_startup.py`.
 
 ---
 
@@ -457,7 +538,7 @@ implementar su adaptador, no modificar el pipeline.
 | Análisis (texto) | < 100 ms para 20 000 segmentos |
 | Transcripción | Dominada por Whisper; `small` en CPU ~1× tiempo real |
 | Render | 1080×1920 @ 30 fps, `veryfast`, CRF 20 |
-| Tamaño del bundle | ~250 MB (206 archivos) — incluye CTranslate2, PyAV, ONNX, NumPy |
+| Tamaño del bundle | ~254 MB (232 archivos) — incluye CTranslate2, PyAV, ONNX, NumPy, WebView2 |
 | Tamaño del JSON de entrada | Tope de 2 MB |
 
 ---

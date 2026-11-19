@@ -1,6 +1,6 @@
 # Empaquetado ejecutable (Windows)
 
-> Versión documentada: **0.4.1**
+> Versión documentada: **0.5.0**
 > Esta guía explica cómo generar `ViralClip.exe` a partir del código fuente y cómo usarlo.
 
 ---
@@ -25,15 +25,16 @@ dist/
 - Es **portable**: puedes mover la carpeta `ViralClip` completa a otra ruta o equipo.
 - Debes distribuir **toda la carpeta**, no solo el `.exe`.
 
-Tamaño de referencia del build verificado (0.4.1, Windows 11 x64, Python 3.14):
+Tamaño de referencia del build verificado (0.5.0, Windows 11 x64, Python 3.14):
 
 | Elemento | Tamaño |
 |---|---|
-| `ViralClip.exe` | 14,58 MB |
-| Carpeta `dist/ViralClip` completa | **251,1 MB** (208 archivos) |
+| `ViralClip.exe` | 14,63 MB |
+| Carpeta `dist/ViralClip` completa | **254,3 MB** (232 archivos) |
 
-El tamaño crece frente a la 0.2.0 porque incluye CTranslate2, PyAV, ONNX Runtime, NumPy y
-tokenizers. Los modelos de Whisper **no** están en el bundle.
+El tamaño crece frente a la 0.2.0 porque incluye CTranslate2, PyAV, ONNX Runtime, NumPy,
+tokenizers y los ensamblados de interoperabilidad de **WebView2** (necesarios para la
+ventana nativa). Los modelos de Whisper **no** están en el bundle.
 
 ### Los assets web incluidos
 
@@ -116,22 +117,50 @@ El ejecutable conserva el comportamiento del lanzador `viralclip`:
 
 1. arranca la API local;
 2. elige un puerto libre si usas `--port 0`;
-3. abre el navegador;
-4. se detiene con `Ctrl+C` en la ventana de consola.
+3. **abre su propia ventana de escritorio** (no el navegador);
+4. se detiene al cerrar la ventana.
 
 Opciones:
 
 ```bat
+ViralClip.exe                     :: ventana de escritorio (por defecto)
 ViralClip.exe --port 0            :: puerto libre automático
-ViralClip.exe --no-browser        :: no abre el navegador
+ViralClip.exe --browser           :: abre la interfaz en el navegador del sistema
+ViralClip.exe --no-browser        :: solo el servidor, sin interfaz
 ViralClip.exe --db C:\ruta\mi.db  :: base SQLite explícita
 ViralClip.exe --host 127.0.0.1    :: host de escucha
 ViralClip.exe --transcribe video.mp4 --model small --language es
 ViralClip.exe --version
 ```
 
-La consola muestra la URL, la documentación de la API y los logs. Es intencional: permite
-ver errores y cerrar el servidor con `Ctrl+C`.
+### El ejecutable no tiene consola
+
+Desde la **0.5.0** el build es de tipo ventana (`console=False`): no aparece una
+consola de Windows detrás de la app. A cambio:
+
+- la salida (errores, URLs, logs de Uvicorn) se guarda en
+  `%LOCALAPPDATA%\ViralClip\viralclip.log`;
+- los errores graves se muestran en un diálogo nativo (`MessageBox`);
+- al cerrar la ventana se detiene el servidor y no queda ningún proceso en segundo
+  plano.
+
+Para depurar, genera una build **con consola**:
+
+```bat
+set VIRALCLIP_CONSOLE=1
+build.bat
+```
+
+Con esa variante los mensajes salen por la consola y `Ctrl+C` detiene el servidor.
+
+### Requisito: Edge WebView2
+
+La ventana se apoya en **WebView2** (el motor Chromium embebido de Edge). Viene
+instalado de serie en Windows 11 y en las actualizaciones recientes de Windows 10. Si
+no estuviera, Windows ofrece instalarlo automáticamente la primera vez. El bundle
+incluye los ensamblados de interoperabilidad (`Microsoft.Web.WebView2.Core.dll` y
+`Microsoft.Web.WebView2.WinForms.dll`), pero **no** el runtime del navegador: este se
+instala en el sistema.
 
 ---
 
@@ -219,7 +248,7 @@ Comprobaciones rápidas:
 dist\ViralClip\ViralClip.exe --version
 ```
 
-Debe responder con la versión (por ejemplo `viralclip 0.4.1`).
+Debe responder con la versión (por ejemplo `viralclip 0.5.0`).
 
 Arranque y comprobación HTTP:
 
@@ -227,7 +256,10 @@ Arranque y comprobación HTTP:
 dist\ViralClip\ViralClip.exe --no-browser --port 8766
 ```
 
-Abre la URL impresa y verifica:
+> El build normal **no tiene consola**: la URL y los logs se escriben en
+> `%LOCALAPPDATA%\ViralClip\viralclip.log`. Ábrelo para ver la salida.
+
+Abre la URL y verifica:
 
 | Comprobación | Resultado esperado |
 |---|---|
@@ -238,6 +270,16 @@ Abre la URL impresa y verifica:
 | `/static/app.js` | `200` |
 | `/api/health` | `200` con `status: ok` (o `degraded` si Ollama no está) |
 | `/api/config` | `200` e incluye `whisper_models` y `ffmpeg_available` |
+
+Comprobación de la ventana nativa (doble clic en `ViralClip.exe`):
+
+| Comprobación | Resultado esperado |
+|---|---|
+| Ventana | Aparece con el título **"Editor de Clips Virales"** y el icono de la app |
+| Navegador | **No** se abre ninguna pestaña de Chrome, Edge, Firefox o Brave |
+| Procesos | Solo `ViralClip.exe` y sus hijos `msedgewebview2.exe` (motor embebido) |
+| Tamaño | 1280×880 px (redimensionable, mínimo 940×620) |
+| Cierre | Al cerrar la ventana no queda ningún proceso `ViralClip.exe` |
 
 Verificación de los assets web en disco:
 
@@ -256,7 +298,8 @@ dist\ViralClip\ViralClip.exe --transcribe C:\ruta\video.mp4 --model small --lang
 
 Debe escribir `video.transcript.json` y mostrar las etapas de progreso.
 
-Cierre: `Ctrl+C` en la consola. No debe quedar ningún proceso `ViralClip.exe`.
+Cierre: al cerrar la ventana de escritorio termina el servidor. No debe quedar ningún
+proceso `ViralClip.exe`.
 
 ---
 
@@ -279,6 +322,9 @@ El script ya limpia `build/` y `dist/` en cada ejecución. El icono se regenera 
 | `script ... launcher.py not found` | `SPECPATH` mal resuelto en el spec | Actualizar a la versión actual de `packaging/viralclip.spec` |
 | La interfaz carga sin estilos | Assets web no incluidos | Revisar `datas` del spec y reconstruir |
 | `ModuleNotFoundError: uvicorn...` | Falta un `hiddenimport` | Añadirlo al spec y reconstruir |
+| `AttributeError: 'NoneType' object has no attribute 'isatty'` | Build antiguo (pre-0.5.0) o `sys.stdout` a `None` | Actualizar a la 0.5.0; ver [`manual-tecnico.md`](manual-tecnico.md#9-bis-ventana-de-escritorio-nativa) |
+| La ventana no aparece | Falta el runtime de WebView2 | Windows lo instala automáticamente; si no, instalarlo desde Microsoft |
+| `pywebview` no encontrado | `pywebview` no instalado en el entorno de build | `pip install -r requirements.txt` y reconstruir |
 | El antivirus borra el `.exe` | Falso positivo de PyInstaller | Exclusión local o build firmado (fuera de alcance) |
 | No se puede escribir la base | Ruta sin permisos | Usar `--db` o `VIRALCLIP_DB_PATH` en una ruta escribible |
 | Aviso `hidden import 'tzdata' not found` | Dependencia opcional de zonas horarias | No bloquea; se puede ignorar |
@@ -289,7 +335,8 @@ El script ya limpia `build/` y `dist/` en cada ejecución. El icono se regenera 
 
 - Solo se validó el build de **Windows**; macOS/Linux no se probaron.
 - No hay instalador, firma de código ni auto-update.
-- No hay icono de bandeja ni modo sin consola.
+- No hay icono de bandeja; el modo sin consola es el único (se puede forzar una build
+  con consola con `set VIRALCLIP_CONSOLE=1`).
 - El tamaño del bundle no está optimizado con `upx` (desactivado a propósito para evitar
   más falsos positivos).
 - La ruta `.env` depende del directorio de trabajo del acceso directo.

@@ -4,3 +4,7 @@ httpx>=0.27
 python-multipart>=0.0.9
 faster-whisper>=1.2
 numpy>=1.26
+# Ventana de escritorio nativa (WebView2 en Windows, WebKitGTK en Linux,
+# WKWebView en macOS). En Windows usa el runtime de Edge WebView2, instalado
+# de serie en Windows 11 y en las actualizaciones recientes de Windows 10.
+pywebview>=6.0
