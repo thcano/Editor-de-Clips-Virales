@@ -119,6 +119,10 @@ miniatura en `%LOCALAPPDATA%\ViralClip\renders` (o en `--render-output`).
 
 ## Ejecutable para Windows
 
+> **Clonar el repo:** el bundle usa **git-lfs** (`.dll`, `.exe`, `.pyd`). Ejecuta
+> `git lfs install` antes de clonar; sin los binarios reales, el ejecutable
+> clonado no arranca.
+
 ### Descarga directa (versión 0.5.0)
 
 **[`ViralClip-0.5.0-win64.zip` (102 MB)](https://github.com/thcano/Editor-de-Clips-Virales/releases/download/v0.5.0/ViralClip-0.5.0-win64.zip)**

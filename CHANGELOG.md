@@ -45,6 +45,15 @@ adopta [Semantic Versioning](https://semver.org/lang/es/).
      `use_colors=False`, de modo que el formateador nunca consulta `isatty()`.
 - Tests de regresión en `tests/test_no_console_startup.py` que reproducen el
   entorno `sys.stdout = None` del build empaquetado.
+- **`.gitignore` ignoraba los módulos nativos `.pyd`**: el patrón `*.py[cod]`
+  (bytecode compilado) también capturaba los `.pyd`, que son módulos de
+  extensión nativos. Quedaban fuera del repo dos binarios imprescindibles del
+  bundle — `_cffi_backend.cp314-win_amd64.pyd`, requerido por `clr_loader` para
+  crear el runtime .NET que usa pythonnet, y `_elementtree.pyd` — por lo que el
+  ejecutable **clonado desde el repo** fallaba al arrancar con
+  `Failed to create a .NET runtime (coreclr)`. El ZIP de la release no estaba
+  afectado (se genera desde `dist/` en disco). El patrón pasa a ser `*.pyc` y
+  `*.pyo`, y los `.pyd` se versionan con git-lfs igual que los `.dll`.
 
 ### Cambiado
 

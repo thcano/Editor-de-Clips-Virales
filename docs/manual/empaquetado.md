@@ -305,6 +305,10 @@ proceso `ViralClip.exe`.
 
 ## 9. Limpiar y reconstruir
 
+> **Clonar el repo:** el bundle usa **git-lfs** (`.dll`, `.exe`, `.pyd` y `.pkg`).
+> Instala lfs antes de clonar: `git lfs install`. Sin los binarios reales, el
+> ejecutable clonado no arranca.
+
 ```bat
 rmdir /s /q build
 rmdir /s /q dist
@@ -325,6 +329,7 @@ El script ya limpia `build/` y `dist/` en cada ejecución. El icono se regenera 
 | `AttributeError: 'NoneType' object has no attribute 'isatty'` | Build antiguo (pre-0.5.0) o `sys.stdout` a `None` | Actualizar a la 0.5.0; ver [`manual-tecnico.md`](manual-tecnico.md#9-bis-ventana-de-escritorio-nativa) |
 | La ventana no aparece | Falta el runtime de WebView2 | Windows lo instala automáticamente; si no, instalarlo desde Microsoft |
 | `pywebview` no encontrado | `pywebview` no instalado en el entorno de build | `pip install -r requirements.txt` y reconstruir |
+| `Failed to create a .NET runtime (coreclr)` | Faltan los `.pyd` del bundle (bug de `.gitignore` corregido en 0.5.0) | Clonar con `git lfs install` y comprobar que existen `_internal/_cffi_backend*.pyd` e `_internal/_elementtree.pyd` |
 | El antivirus borra el `.exe` | Falso positivo de PyInstaller | Exclusión local o build firmado (fuera de alcance) |
 | No se puede escribir la base | Ruta sin permisos | Usar `--db` o `VIRALCLIP_DB_PATH` en una ruta escribible |
 | Aviso `hidden import 'tzdata' not found` | Dependencia opcional de zonas horarias | No bloquea; se puede ignorar |

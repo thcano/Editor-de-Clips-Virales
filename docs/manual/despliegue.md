@@ -377,7 +377,7 @@ Antes de publicar una release:
 .venv\Scripts\python.exe -m pytest
 
 # 2. Lint
-.venv\Scripts\python.exe -m ruff check src tests
+.venv\Scripts\python.exe -m ruff check src packaging tests
 
 # 3. Build limpio
 build.bat
@@ -386,6 +386,10 @@ build.bat
 .\dist\ViralClip\ViralClip.exe --version
 .\dist\ViralClip\ViralClip.exe --no-browser --port 8766
 ```
+
+> El bundle usa **git-lfs**. Si clonas el repo para compilar o verificar,
+> ejecuta `git lfs install` antes: sin los binarios reales (`.dll`, `.exe`,
+> `.pyd`) el ejecutable clonado no arranca.
 
 Después:
 
