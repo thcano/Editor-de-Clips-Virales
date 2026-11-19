@@ -20,7 +20,12 @@ data/*.db-wal
 
 # Python
 __pycache__/
-*.py[cod]
+# Solo bytecode compilado. NO usar "*.py[cod]": ese patrón también captura
+# los ".pyd" (módulos de extensión nativos), que son binarios **necesarios**
+# en el bundle del ejecutable (p.ej. _cffi_backend, requerido por clr_loader
+# para arrancar la ventana nativa de pywebview).
+*.pyc
+*.pyo
 *.egg-info/
 .venv/
 venv/
